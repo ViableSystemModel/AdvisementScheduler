@@ -17,6 +17,10 @@ export const loggedInUser = query({
       return null;
     }
 
+    if (user.email !== 'cars2550@fredonia.edu') {
+      return null;
+    }
+
     return user;
   },
 });
