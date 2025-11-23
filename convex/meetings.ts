@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { getLoggedInAdvisor } from "./auth";
 import { _requireSemester } from "./semesters";
@@ -17,18 +17,18 @@ export const createMeeting = mutation({
   handler: async (ctx, args) => {
     const advisor = await getLoggedInAdvisor(ctx);
     if (!advisor) {
-      throw new Error('You must be an advisor to create a meeting')
+      throw new ConvexError('You must be an advisor to create a meeting')
     }
 
     const semester = await _requireSemester(ctx, args.semesterId
-      ? {semesterId: args.semesterId}
-      : {advisorId: advisor._id}
+      ? { semesterId: args.semesterId }
+      : { advisorId: advisor._id }
     )
 
     let secretCode: string;
     do {
       secretCode = createSecretCode()
-    } while(
+    } while (
       await ctx.db.query('meeting')
         .withIndex('by_secret_code', q => q.eq('secretCode', secretCode))
         .first()
@@ -62,15 +62,15 @@ export const getMeeting = query({
         .collect()
     ])
     if (!student) {
-      throw new Error('Student not found')
+      throw new ConvexError('Student not found')
     }
     if (!semester) {
-      throw new Error('Semester not found')
+      throw new ConvexError('Semester not found')
     }
 
     const advisor = await ctx.db.get(semester.advisorId)
     if (!advisor) {
-      throw new Error('Advisor not found')
+      throw new ConvexError('Advisor not found')
     }
 
     const bookedSlots = allMeetings.map(slot => slot.timeSlotId).filter(id => id != null)
@@ -100,32 +100,32 @@ export const bookMeeting = mutation({
       ctx.db.get(args.timeSlotId),
     ]);
     if (!meeting) {
-      throw new Error('Meeting not found');
+      throw new ConvexError('Meeting not found');
     }
     if (!timeSlot) {
-      throw new Error('Time slot not found')
+      throw new ConvexError('Time slot not found')
     }
     if (meeting.secretCode !== args.secretCode) {
-      throw new Error('Incorrect secret code')
+      throw new ConvexError('Incorrect secret code')
     }
     if (meeting.semesterId !== timeSlot.semesterId) {
-      throw new Error('Semesters are mismatched')
+      throw new ConvexError('Semesters are mismatched')
     }
     if (meeting.timeSlotId != null) {
       if (meeting.timeSlotId === timeSlot._id) {
-        throw new Error('Time slot is already assigned to this meeting')
+        throw new ConvexError('Time slot is already assigned to this meeting')
       } else {
-        throw new Error('Another time slot is already assigned to this meeting')
+        throw new ConvexError('Another time slot is already assigned to this meeting')
       }
     }
 
     const patchPromises = [
-      ctx.db.patch(meeting._id, {timeSlotId: timeSlot._id})
+      ctx.db.patch(meeting._id, { timeSlotId: timeSlot._id })
     ]
     if (args.bookerEmail || args.bookerPhone) {
       const student = await ctx.db.get(meeting.studentId);
       if (!student) {
-        throw new Error('Student not found')
+        throw new ConvexError('Student not found')
       }
       const ContactSchema = b.object({
         email: b.optional(b.pipe(
@@ -143,7 +143,7 @@ export const bookMeeting = mutation({
         phone: args.bookerPhone,
       })
       if (!result.success) {
-        throw new Error(result.issues.pop()?.message ?? 'Unknown error with contact information')
+        throw new ConvexError(result.issues.pop()?.message ?? 'Unknown error with contact information')
       }
       patchPromises.push(ctx.db.patch(student._id, result.output))
     }

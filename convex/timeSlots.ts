@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { getLoggedInAdvisor } from "./auth";
 import { DateTime } from "luxon";
@@ -12,27 +12,27 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const advisor = await getLoggedInAdvisor(ctx);
     if (!advisor) {
-      throw new Error('You must be an advisor to create a time slot');
+      throw new ConvexError('You must be an advisor to create a time slot');
     }
 
     const semester = await _requireSemester(ctx, args.semesterId
-      ? {semesterId: args.semesterId}
-      : {advisorId: advisor._id}
+      ? { semesterId: args.semesterId }
+      : { advisorId: advisor._id }
     )
 
-    const slotStart = DateTime.fromSeconds(args.start, {zone: 'utc'});
+    const slotStart = DateTime.fromSeconds(args.start, { zone: 'utc' });
     if (!slotStart.isValid) {
-      throw new Error('Start date is invalid');
+      throw new ConvexError('Start date is invalid');
     }
-    const semesterStart = DateTime.fromSeconds(semester.startDate, {zone: 'utc'});
+    const semesterStart = DateTime.fromSeconds(semester.startDate, { zone: 'utc' });
     if (slotStart.valueOf() < semesterStart.valueOf()) {
-      throw new Error('Slot cannot start before semester starts');
+      throw new ConvexError('Slot cannot start before semester starts');
     }
 
-    const slotEnd = slotStart.plus({minutes: 15});
-    const semesterEnd = DateTime.fromSeconds(semester.endDate, {zone: 'utc'});
+    const slotEnd = slotStart.plus({ minutes: 15 });
+    const semesterEnd = DateTime.fromSeconds(semester.endDate, { zone: 'utc' });
     if (slotEnd.valueOf() > semesterEnd.valueOf()) {
-      throw new Error('Slot cannot end after semester ends');
+      throw new ConvexError('Slot cannot end after semester ends');
     }
 
     const overlappingSlot = await ctx.db.query('timeSlot')
@@ -41,7 +41,7 @@ export const create = mutation({
       .filter(q => q.lt(q.field('startDateTime'), slotEnd.toSeconds()))
       .first()
     if (overlappingSlot) {
-      throw new Error('New slot overlaps with existing slot')
+      throw new ConvexError('New slot overlaps with existing slot')
     }
 
     return await ctx.db.insert('timeSlot', {
@@ -59,12 +59,12 @@ export const listForAdvisor = query({
   handler: async (ctx, args) => {
     const advisor = await getLoggedInAdvisor(ctx);
     if (!advisor) {
-      throw new Error('You must be an advisor to create a time slot');
+      throw new ConvexError('You must be an advisor to create a time slot');
     }
 
     const semester = await _requireSemester(ctx, args.semesterId
-      ? {semesterId: args.semesterId}
-      : {advisorId: advisor._id}
+      ? { semesterId: args.semesterId }
+      : { advisorId: advisor._id }
     )
 
     const slots = await ctx.db.query('timeSlot')
@@ -85,17 +85,17 @@ const listForStudent = query({
   handler: async (ctx, args) => {
     const meeting = await ctx.db.get(args.meetingId);
     if (!meeting) {
-      throw new Error('Could not find meeting');
+      throw new ConvexError('Could not find meeting');
     }
 
     if (meeting.secretCode !== args.secretCode) {
-      throw new Error('Invalid secret code');
+      throw new ConvexError('Invalid secret code');
     }
 
     if (meeting.timeSlotId) {
       const slot = await ctx.db.get(meeting.timeSlotId);
       if (!slot) {
-        throw new Error('Could not find selected time slot for meeting');
+        throw new ConvexError('Could not find selected time slot for meeting');
       }
 
       return [slot]
@@ -126,28 +126,28 @@ export const deleteOne = mutation({
   handler: async (ctx, args) => {
     const advisor = await getLoggedInAdvisor(ctx);
     if (!advisor) {
-      throw new Error('You must be an advisor to delete a time slot');
+      throw new ConvexError('You must be an advisor to delete a time slot');
     }
 
     const timeSlot = await ctx.db.get(args.timeSlotId);
     if (!timeSlot) {
-      throw new Error("Time slot not found");
+      throw new ConvexError("Time slot not found");
     }
 
     const semester = await ctx.db.get(timeSlot.semesterId);
     if (!semester) {
-      throw new Error('Time slot does not have an associated semester')
+      throw new ConvexError('Time slot does not have an associated semester')
     }
 
     if (semester.advisorId !== advisor._id) {
-      throw new Error('You cannot delete time slots you did not create');
+      throw new ConvexError('You cannot delete time slots you did not create');
     }
 
     const meeting = await ctx.db.query('meeting')
       .filter(q => q.eq(q.field('timeSlotId'), timeSlot._id))
       .first()
     if (meeting) {
-      throw new Error('Cannot delete a time slot with an associated meeting');
+      throw new ConvexError('Cannot delete a time slot with an associated meeting');
     }
 
     await ctx.db.delete(args.timeSlotId);

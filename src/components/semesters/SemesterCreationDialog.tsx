@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useMutation } from "convex/react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -5,10 +6,13 @@ import { Input } from "@/components/ui/input";
 import { api } from "@convex/_generated/api";
 import * as v from 'valibot';
 import { useForm } from '@tanstack/react-form'
+import { toast } from "sonner";
 
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { DatePicker } from "@/components/ui/date-picker";
 import { DateTime } from "luxon";
+import { Spinner } from "../ui/spinner";
+import { ConvexError } from "convex/values";
 
 const formSchema = v.object({
   displayName: v.pipe(v.string(), v.minLength(4)),
@@ -23,6 +27,8 @@ const formSchema = v.object({
 })
 
 export function SemesterCreationDialog() {
+  const [loading, setLoading] = useState(false)
+  const [open, setOpen] = useState(false)
   const createSemester = useMutation(api.semesters.create)
   const creationForm = useForm({
     defaultValues: {
@@ -35,27 +41,44 @@ export function SemesterCreationDialog() {
       onSubmit: formSchema,
     },
     onSubmit: async ({ value }) => {
-      await createSemester({
-        displayName: value.displayName,
-        startDate: Math.round(value.startDate.getTime() / 1000),
-        endDate: Math.round(value.endDate.getTime() / 1000)
-      })
+      setLoading(true)
+      try {
+        await createSemester({
+          displayName: value.displayName,
+          startDate: Math.round(value.startDate.getTime() / 1000),
+          endDate: Math.round(value.endDate.getTime() / 1000)
+        })
+        toast.success("Semester created successfully")
+        setOpen(false)
+      } catch (error) {
+        console.error(error)
+        toast.error(
+          error instanceof ConvexError
+            ? error.data
+            : "Failed to create semester. Please try again."
+        )
+      } finally {
+        setLoading(false)
+      }
     }
   })
 
   return (
-    <Dialog>
-      <form
-        id='semester-creation-form'
-        onSubmit={e => {
-          e.preventDefault()
-          creationForm.handleSubmit()
-        }}
-      >
-        <DialogTrigger asChild>
-          <Button variant="outline">Open Dialog</Button>
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-[425px]">
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline">Open Dialog</Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        {loading && <Spinner />}
+        <form
+          id='semester-creation-form'
+          onSubmit={e => {
+            e.preventDefault()
+            e.stopPropagation()
+            creationForm.handleSubmit()
+          }}
+          className="contents"
+        >
           <DialogHeader>
             <DialogTitle>Edit profile</DialogTitle>
             <DialogDescription>
@@ -126,10 +149,10 @@ export function SemesterCreationDialog() {
             <DialogClose asChild>
               <Button variant="outline">Cancel</Button>
             </DialogClose>
-            <Button type='submit' form='semester-creation-form'>Create</Button>
+            <Button type='submit' disabled={loading} form='semester-creation-form'>Create</Button>
           </DialogFooter>
-        </DialogContent>
-      </form>
+        </form>
+      </DialogContent>
     </Dialog>
   )
 }
