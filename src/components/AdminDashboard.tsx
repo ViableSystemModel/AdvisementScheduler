@@ -12,7 +12,7 @@ export function AdminDashboard() {
   const meetings = useQuery(api.meetings.getUserMeetings) || [];
   const toggleMeetingStatus = useMutation(api.meetings.toggleMeetingStatus);
 
-  const handleToggleStatus = async (meetingId: Id<"meetings">) => {
+  const handleToggleStatus = async (meetingId: Id<"meeting">) => {
     try {
       await toggleMeetingStatus({ meetingId });
       toast.success("Meeting status updated");

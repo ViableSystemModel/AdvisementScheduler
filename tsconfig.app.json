@@ -22,6 +22,7 @@
 
     /* Import paths */
     "paths": {
+      "@convex/*": ["./convex/*"],
       "@/*": ["./src/*"]
     }
   },

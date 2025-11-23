@@ -17,7 +17,9 @@ import type * as auth from "../auth.js";
 import type * as http from "../http.js";
 import type * as meetings from "../meetings.js";
 import type * as router from "../router.js";
+import type * as semesters from "../semesters.js";
 import type * as timeSlots from "../timeSlots.js";
+import type * as types from "../types.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -32,7 +34,9 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   meetings: typeof meetings;
   router: typeof router;
+  semesters: typeof semesters;
   timeSlots: typeof timeSlots;
+  types: typeof types;
 }>;
 export declare const api: FilterApi<
   typeof fullApi,

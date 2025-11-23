@@ -1,245 +1,152 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
-import { getAuthUserId } from "@convex-dev/auth/server";
+import { getLoggedInAdvisor } from "./auth";
+import { _requireSemester } from "./semesters";
+import * as b from 'valibot';
+import * as uuid from 'uuid'
+
+function createSecretCode() {
+  return uuid.v4();
+}
 
 export const createMeeting = mutation({
   args: {
-    title: v.string(),
-    description: v.optional(v.string()),
-    duration: v.number(),
+    studentId: v.id('student'),
+    semesterId: v.optional(v.id('semester')),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("Must be logged in to create meetings");
+    const advisor = await getLoggedInAdvisor(ctx);
+    if (!advisor) {
+      throw new Error('You must be an advisor to create a meeting')
     }
 
-    const meetingId = await ctx.db.insert("meetings", {
-      title: args.title,
-      description: args.description,
-      duration: args.duration,
-      createdBy: userId,
-      isActive: true,
+    const semester = await _requireSemester(ctx, args.semesterId
+      ? {semesterId: args.semesterId}
+      : {advisorId: advisor._id}
+    )
+
+    let secretCode: string;
+    do {
+      secretCode = createSecretCode()
+    } while(
+      await ctx.db.query('meeting')
+        .withIndex('by_secret_code', q => q.eq('secretCode', secretCode))
+        .first()
+    )
+
+    return await ctx.db.insert("meeting", {
+      studentId: args.studentId,
+      semesterId: semester._id,
+      secretCode: secretCode,
     });
-
-    return meetingId;
-  },
-});
-
-export const getUserMeetings = query({
-  args: {},
-  handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      return [];
-    }
-
-    const meetings = await ctx.db
-      .query("meetings")
-      .withIndex("by_creator", (q) => q.eq("createdBy", userId))
-      .collect();
-
-    // Get booking counts for each meeting
-    const meetingsWithDetails = await Promise.all(
-      meetings.map(async (meeting) => {
-        const bookings = await ctx.db
-          .query("bookings")
-          .withIndex("by_meeting", (q) => q.eq("meetingId", meeting._id))
-          .filter((q) => q.eq(q.field("status"), "confirmed"))
-          .collect();
-
-        // Get available time slots for this meeting duration
-        const availableSlots = await ctx.db
-          .query("timeSlots")
-          .withIndex("by_duration", (q) => q.eq("duration", meeting.duration))
-          .filter((q) => 
-            q.and(
-              q.eq(q.field("createdBy"), userId),
-              q.eq(q.field("isActive"), true)
-            )
-          )
-          .collect();
-
-        return {
-          ...meeting,
-          bookingCount: bookings.length,
-          availableSlotCount: availableSlots.length,
-        };
-      })
-    );
-
-    return meetingsWithDetails;
   },
 });
 
 export const getMeeting = query({
-  args: { meetingId: v.id("meetings") },
+  args: { meetingId: v.string() },
   handler: async (ctx, args) => {
-    const meeting = await ctx.db.get(args.meetingId);
-    if (!meeting || !meeting.isActive) {
-      return null;
+    const meeting = await ctx.db.query('meeting')
+      .filter(q => q.eq(q.field('secretCode'), args.meetingId))
+      .first();
+    if (!meeting) {
+      return null
+    }
+    const [student, semester, allMeetings, allSlots] = await Promise.all([
+      ctx.db.get(meeting.studentId),
+      ctx.db.get(meeting.semesterId),
+      ctx.db.query('meeting')
+        .filter(q => q.eq(q.field('semesterId'), meeting.semesterId))
+        .collect(),
+      ctx.db.query('timeSlot')
+        .filter(q => q.eq(q.field('semesterId'), meeting.semesterId))
+        .collect()
+    ])
+    if (!student) {
+      throw new Error('Student not found')
+    }
+    if (!semester) {
+      throw new Error('Semester not found')
     }
 
-    // Get available time slots for this meeting duration
-    const availableSlots = await ctx.db
-      .query("timeSlots")
-      .withIndex("by_duration", (q) => q.eq("duration", meeting.duration))
-      .filter((q) => 
-        q.and(
-          q.eq(q.field("createdBy"), meeting.createdBy),
-          q.eq(q.field("isActive"), true)
-        )
-      )
-      .collect();
-
-    // Get all bookings for this meeting
-    const bookings = await ctx.db
-      .query("bookings")
-      .withIndex("by_meeting", (q) => q.eq("meetingId", args.meetingId))
-      .filter((q) => q.eq(q.field("status"), "confirmed"))
-      .collect();
-
-    const userId = await getAuthUserId(ctx);
-    const userBooking = bookings.find(b => b.bookedBy === userId);
-
-    let userBookedSlot = null;
-    if (userBooking) {
-      userBookedSlot = await ctx.db.get(userBooking.timeSlotId);
+    const advisor = await ctx.db.get(semester.advisorId)
+    if (!advisor) {
+      throw new Error('Advisor not found')
     }
+
+    const bookedSlots = allMeetings.map(slot => slot.timeSlotId).filter(id => id != null)
+    const availableSlots = allSlots.filter(slot => !bookedSlots.includes(slot._id) || slot._id === meeting.timeSlotId)
 
     return {
       ...meeting,
+      student,
+      semester,
+      advisor,
       availableSlots,
-      bookedSlotIds: bookings.map(b => b.timeSlotId),
-      userBookedSlot,
-    };
+    }
   },
 });
 
-export const bookSlot = mutation({
+export const bookMeeting = mutation({
   args: {
-    meetingId: v.id("meetings"),
-    timeSlotId: v.id("timeSlots"),
-    bookerName: v.optional(v.string()),
+    meetingId: v.id("meeting"),
+    timeSlotId: v.id("timeSlot"),
+    secretCode: v.string(),
     bookerEmail: v.optional(v.string()),
+    bookerPhone: v.optional(v.string())
   },
   handler: async (ctx, args) => {
-    const meeting = await ctx.db.get(args.meetingId);
-    if (!meeting || !meeting.isActive) {
-      throw new Error("Meeting not found or inactive");
+    const [meeting, timeSlot] = await Promise.all([
+      ctx.db.get(args.meetingId),
+      ctx.db.get(args.timeSlotId),
+    ]);
+    if (!meeting) {
+      throw new Error('Meeting not found');
     }
-
-    const timeSlot = await ctx.db.get(args.timeSlotId);
-    if (!timeSlot || !timeSlot.isActive) {
-      throw new Error("Time slot not found or inactive");
+    if (!timeSlot) {
+      throw new Error('Time slot not found')
     }
-
-    // Verify time slot duration matches meeting duration
-    if (timeSlot.duration !== meeting.duration) {
-      throw new Error("Time slot duration doesn't match meeting duration");
+    if (meeting.secretCode !== args.secretCode) {
+      throw new Error('Incorrect secret code')
     }
-
-    // Verify time slot belongs to meeting creator
-    if (timeSlot.createdBy !== meeting.createdBy) {
-      throw new Error("Time slot not available for this meeting");
+    if (meeting.semesterId !== timeSlot.semesterId) {
+      throw new Error('Semesters are mismatched')
     }
-
-    const userId = await getAuthUserId(ctx);
-
-    // Check if slot is already booked for this meeting
-    const existingBooking = await ctx.db
-      .query("bookings")
-      .withIndex("by_meeting_and_slot", (q) => 
-        q.eq("meetingId", args.meetingId).eq("timeSlotId", args.timeSlotId)
-      )
-      .filter((q) => q.eq(q.field("status"), "confirmed"))
-      .first();
-
-    if (existingBooking) {
-      throw new Error("This time slot is already booked for this meeting");
-    }
-
-    // Check if user already has a booking for this meeting
-    if (userId) {
-      const userExistingBooking = await ctx.db
-        .query("bookings")
-        .withIndex("by_meeting", (q) => q.eq("meetingId", args.meetingId))
-        .filter((q) => 
-          q.and(
-            q.eq(q.field("bookedBy"), userId),
-            q.eq(q.field("status"), "confirmed")
-          )
-        )
-        .first();
-
-      if (userExistingBooking) {
-        throw new Error("You already have a booking for this meeting");
+    if (meeting.timeSlotId != null) {
+      if (meeting.timeSlotId === timeSlot._id) {
+        throw new Error('Time slot is already assigned to this meeting')
+      } else {
+        throw new Error('Another time slot is already assigned to this meeting')
       }
     }
 
-    const bookingId = await ctx.db.insert("bookings", {
-      meetingId: args.meetingId,
-      timeSlotId: args.timeSlotId,
-      bookedBy: userId || undefined,
-      bookerName: args.bookerName,
-      bookerEmail: args.bookerEmail,
-      status: "confirmed",
-    });
-
-    return bookingId;
-  },
-});
-
-export const cancelBooking = mutation({
-  args: {
-    meetingId: v.id("meetings"),
-  },
-  handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("Must be logged in to cancel booking");
+    const patchPromises = [
+      ctx.db.patch(meeting._id, {timeSlotId: timeSlot._id})
+    ]
+    if (args.bookerEmail || args.bookerPhone) {
+      const student = await ctx.db.get(meeting.studentId);
+      if (!student) {
+        throw new Error('Student not found')
+      }
+      const ContactSchema = b.object({
+        email: b.optional(b.pipe(
+          b.string(),
+          b.email(),
+        ), student.email),
+        phone: b.optional(b.pipe(
+          b.string(),
+          b.regex(/^\+?\d{0,3}\s?[(]?\d{3}[)]?[-\s\.]?\d{3}[-\s\.]?\d{4}$/),
+          b.transform(phone => phone.replaceAll(/\D/, ''))
+        ), student.phone)
+      })
+      const result = b.safeParse(ContactSchema, {
+        email: args.bookerEmail,
+        phone: args.bookerPhone,
+      })
+      if (!result.success) {
+        throw new Error(result.issues.pop()?.message ?? 'Unknown error with contact information')
+      }
+      patchPromises.push(ctx.db.patch(student._id, result.output))
     }
-
-    const booking = await ctx.db
-      .query("bookings")
-      .withIndex("by_meeting", (q) => q.eq("meetingId", args.meetingId))
-      .filter((q) => 
-        q.and(
-          q.eq(q.field("bookedBy"), userId),
-          q.eq(q.field("status"), "confirmed")
-        )
-      )
-      .first();
-
-    if (!booking) {
-      throw new Error("No booking found to cancel");
-    }
-
-    await ctx.db.patch(booking._id, { status: "cancelled" });
-  },
-});
-
-export const toggleMeetingStatus = mutation({
-  args: {
-    meetingId: v.id("meetings"),
-  },
-  handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("Must be logged in");
-    }
-
-    const meeting = await ctx.db.get(args.meetingId);
-    if (!meeting) {
-      throw new Error("Meeting not found");
-    }
-
-    if (meeting.createdBy !== userId) {
-      throw new Error("Not authorized to modify this meeting");
-    }
-
-    await ctx.db.patch(args.meetingId, {
-      isActive: !meeting.isActive,
-    });
+    await Promise.all(patchPromises)
   },
 });

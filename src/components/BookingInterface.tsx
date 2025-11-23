@@ -6,27 +6,26 @@ import { Id } from "../../convex/_generated/dataModel";
 
 interface BookingInterfaceProps {
   meetingId: string;
-  onMeetingIdChange: (id: string) => void;
 }
 
-export function BookingInterface({ meetingId, onMeetingIdChange }: BookingInterfaceProps) {
-  const [selectedSlotId, setSelectedSlotId] = useState<Id<"timeSlots"> | null>(null);
-  const [bookerName, setBookerName] = useState("");
-  const [bookerEmail, setBookerEmail] = useState("");
+export function BookingInterface({ meetingId }: BookingInterfaceProps) {
+  const [selectedSlotId, setSelectedSlotId] = useState<Id<'timeSlot'> | null>(null);
+  const [bookerEmail, setBookerEmail] = useState('')
+  const [bookerPhone, setBookerPhone] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const meeting = useQuery(
     api.meetings.getMeeting,
-    meetingId ? { meetingId: meetingId as Id<"meetings"> } : "skip"
+    meetingId ? { meetingId: meetingId } : "skip"
   );
-  const bookSlot = useMutation(api.meetings.bookSlot);
-  const cancelBooking = useMutation(api.meetings.cancelBooking);
+  const bookMeeting = useMutation(api.meetings.bookMeeting);
+  // const cancelBooking = useMutation(api.meetings.);
   const loggedInUser = useQuery(api.auth.loggedInUser);
 
   const handleBookSlot = async () => {
     if (!selectedSlotId || !meeting) return;
 
-    if (!loggedInUser && (!bookerName.trim() || !bookerEmail.trim())) {
+    if (!loggedInUser && (!bookerPhone.trim() || !bookerEmail.trim())) {
       toast.error("Please enter your name and email");
       return;
     }
@@ -34,16 +33,17 @@ export function BookingInterface({ meetingId, onMeetingIdChange }: BookingInterf
     setIsSubmitting(true);
 
     try {
-      await bookSlot({
+      await bookMeeting({
         meetingId: meeting._id,
         timeSlotId: selectedSlotId,
-        bookerName: bookerName.trim() || undefined,
+        bookerPhone: bookerPhone.trim() || undefined,
         bookerEmail: bookerEmail.trim() || undefined,
+        secretCode: '',  // TODO: Fix
       });
 
       toast.success("Time slot booked successfully!");
       setSelectedSlotId(null);
-      setBookerName("");
+      setBookerPhone("");
       setBookerEmail("");
     } catch (error: any) {
       toast.error(error.message || "Failed to book time slot");
@@ -56,14 +56,14 @@ export function BookingInterface({ meetingId, onMeetingIdChange }: BookingInterf
     if (!meeting) return;
 
     try {
-      await cancelBooking({ meetingId: meeting._id });
+      // await cancelBooking({ meetingId: meeting._id });
       toast.success("Booking cancelled successfully!");
     } catch (error: any) {
       toast.error(error.message || "Failed to cancel booking");
     }
   };
 
-  const formatDateTime = (dateString: string) => {
+  const formatDateTime = (dateString: number) => {
     const date = new Date(dateString);
     return date.toLocaleString([], {
       weekday: 'long',
@@ -75,36 +75,10 @@ export function BookingInterface({ meetingId, onMeetingIdChange }: BookingInterf
     });
   };
 
-  const formatTime = (dateString: string) => {
+  const formatTime = (dateString: number) => {
     const date = new Date(dateString);
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
-
-  if (!meetingId) {
-    return (
-      <div className="max-w-md mx-auto">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">Book a Meeting</h2>
-        <div className="space-y-4">
-          <div>
-            <label htmlFor="meetingId" className="block text-sm font-medium text-gray-700 mb-1">
-              Meeting ID
-            </label>
-            <input
-              type="text"
-              id="meetingId"
-              value={meetingId}
-              onChange={(e) => onMeetingIdChange(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter meeting ID"
-            />
-          </div>
-          <p className="text-sm text-gray-500">
-            Enter the meeting ID provided by the organizer to view available time slots.
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   if (meeting === undefined) {
     return (
@@ -121,20 +95,12 @@ export function BookingInterface({ meetingId, onMeetingIdChange }: BookingInterf
         <p className="text-gray-600 mb-4">
           The meeting you're looking for doesn't exist or is no longer active.
         </p>
-        <button
-          onClick={() => onMeetingIdChange("")}
-          className="text-blue-600 hover:text-blue-700 font-medium"
-        >
-          Try a different meeting ID
-        </button>
       </div>
     );
   }
 
   // Filter available slots to exclude booked ones for this meeting
-  const availableSlots = meeting.availableSlots.filter(
-    slot => slot && !meeting.bookedSlotIds.includes(slot._id)
-  );
+  const availableSlots = meeting.availableSlots
 
   const selectedSlot = selectedSlotId 
     ? meeting.availableSlots.find(slot => slot && slot._id === selectedSlotId) || null
@@ -143,18 +109,18 @@ export function BookingInterface({ meetingId, onMeetingIdChange }: BookingInterf
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">{meeting.title}</h1>
-        {meeting.description && (
+        <h1 className="text-3xl font-bold text-gray-900">{meeting.student.name}</h1>
+        {/*meeting.description && (
           <p className="text-gray-600 mt-2">{meeting.description}</p>
-        )}
-        <p className="text-sm text-gray-500 mt-1">Duration: {meeting.duration} minutes</p>
+        )*/}
+        <p className="text-sm text-gray-500 mt-1">Duration: 15 minutes</p>
       </div>
 
-      {meeting.userBookedSlot ? (
+      {selectedSlot ? (
         <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
           <h3 className="text-lg font-semibold text-green-800 mb-2">Your Booking</h3>
           <p className="text-green-700">
-            You have booked: {formatDateTime(meeting.userBookedSlot.start)} - {formatTime(meeting.userBookedSlot.end)}
+            You have booked: {formatDateTime(selectedSlot.startDateTime)} - {formatTime(selectedSlot.endDateTime)}
           </p>
           <button
             onClick={handleCancelBooking}
@@ -187,14 +153,14 @@ export function BookingInterface({ meetingId, onMeetingIdChange }: BookingInterf
                     }`}
                   >
                     <div className="font-medium text-gray-900">
-                      {new Date(slot.start).toLocaleDateString([], {
+                      {new Date(slot.startDateTime).toLocaleDateString([], {
                         weekday: 'short',
                         month: 'short',
                         day: 'numeric'
                       })}
                     </div>
                     <div className="text-sm text-gray-600">
-                      {formatTime(slot.start)} - {formatTime(slot.end)}
+                      {formatTime(slot.startDateTime)} - {formatTime(slot.endDateTime)}
                     </div>
                   </button>
                 ))}
@@ -209,21 +175,21 @@ export function BookingInterface({ meetingId, onMeetingIdChange }: BookingInterf
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                 <h4 className="font-semibold text-blue-900 mb-2">Selected Time Slot</h4>
                 <p className="text-blue-800">
-                  {formatDateTime(selectedSlot.start)} - {formatTime(selectedSlot.end)}
+                  {/* {formatDateTime(selectedSlot.startDateTime)} - {formatTime(selectedSlot.endDateTime)} */}
                 </p>
               </div>
               
               {!loggedInUser && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label htmlFor="bookerName" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="bookerPhone" className="block text-sm font-medium text-gray-700 mb-1">
                       Your Name *
                     </label>
                     <input
                       type="text"
-                      id="bookerName"
-                      value={bookerName}
-                      onChange={(e) => setBookerName(e.target.value)}
+                      id="bookerPhone"
+                      value={bookerPhone}
+                      onChange={(e) => setBookerPhone(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Enter your name"
                       required

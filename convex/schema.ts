@@ -1,38 +1,41 @@
-import { defineSchema, defineTable } from "convex/server";
-import { v } from "convex/values";
-import { authTables } from "@convex-dev/auth/server";
+import { defineSchema, defineTable } from 'convex/server';
+import { v } from 'convex/values';
+import { authTables } from '@convex-dev/auth/server';
 
 const applicationTables = {
-  timeSlots: defineTable({
-    start: v.string(), // ISO string
-    end: v.string(), // ISO string
-    duration: v.number(), // duration in minutes
-    createdBy: v.id("users"),
-    isActive: v.boolean(),
-  }).index("by_creator", ["createdBy"])
-    .index("by_start_time", ["start"])
-    .index("by_duration", ["duration"]),
-  
-  meetings: defineTable({
-    title: v.string(),
-    description: v.optional(v.string()),
-    duration: v.number(), // duration in minutes
-    createdBy: v.id("users"),
-    isActive: v.boolean(),
-  }).index("by_creator", ["createdBy"])
-    .index("by_duration", ["duration"]),
-  
-  bookings: defineTable({
-    meetingId: v.id("meetings"),
-    timeSlotId: v.id("timeSlots"),
-    bookedBy: v.optional(v.id("users")), // optional for anonymous bookings
-    bookerName: v.optional(v.string()),
-    bookerEmail: v.optional(v.string()),
-    status: v.union(v.literal("confirmed"), v.literal("cancelled")),
-  }).index("by_meeting", ["meetingId"])
-    .index("by_booker", ["bookedBy"])
-    .index("by_time_slot", ["timeSlotId"])
-    .index("by_meeting_and_slot", ["meetingId", "timeSlotId"]),
+  semester: defineTable({
+    displayName: v.string(),
+    advisorId: v.id('users'),
+    startDate: v.number(),  // seconds since epoch
+    endDate: v.number(),  // seconds since epoch
+  }).index('by_advisor', ['advisorId'])
+    .index('by_start_date', ['startDate']),
+
+  timeSlot: defineTable({
+    semesterId: v.id('semester'),
+    startDateTime: v.number(),  // seconds since epoch
+    endDateTime: v.number(),  // seconds since epoch
+  }).index('by_semester', ['semesterId'])
+    .index('by_start_date_time', ['startDateTime'])
+    .index('by_semester_and_start_date_time', ['semesterId', 'startDateTime']),
+
+  student: defineTable({
+    name: v.string(),
+    email: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    advisorId: v.id('users'),
+  }).index('by_advisor', ['advisorId']),
+
+  meeting: defineTable({
+    studentId: v.id('student'),
+    semesterId: v.id('semester'),
+    timeSlotId: v.optional(v.id('timeSlot')),
+    secretCode: v.string(),
+  }).index('by_student', ['studentId'])
+    .index('by_semester', ['semesterId'])
+    .index('by_time_slot', ['timeSlotId'])
+    .index('by_secret_code', ['secretCode'])
+    .index('by_student_semester_and_slot', ['studentId', 'semesterId', 'timeSlotId']),
 };
 
 export default defineSchema({
