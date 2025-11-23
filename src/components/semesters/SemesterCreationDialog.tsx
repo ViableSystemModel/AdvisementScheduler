@@ -5,13 +5,20 @@ import { Input } from "@/components/ui/input";
 import { api } from "@convex/_generated/api";
 import * as v from 'valibot';
 import { useForm } from "@tanstack/react-form";
-import { Field, FieldError } from "@/components/ui/field";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { DatePicker } from "@/components/ui/date-picker";
+import { DateTime } from "luxon";
 
 const formSchema = v.object({
-  displayName: v.string(),
-  startDate: v.date(),
-  endDate: v.date(),
+  displayName: v.pipe(v.string(), v.minLength(4)),
+  startDate: v.pipe(
+    v.date(),
+    v.toMinValue(DateTime.now().startOf('day').toJSDate()),
+  ),
+  endDate: v.pipe(
+    v.date(),
+    v.toMinValue(DateTime.now().startOf('day').toJSDate()),
+  ),
 })
 
 export function SemesterCreationDialog() {
@@ -23,7 +30,7 @@ export function SemesterCreationDialog() {
       endDate: new Date(),
     },
     validators: {
-      onChange: formSchema,
+      onBlur: formSchema,
       onSubmit: formSchema,
     },
     onSubmit: async ({ value }) => {
@@ -37,7 +44,13 @@ export function SemesterCreationDialog() {
 
   return (
     <Dialog>
-      <form>
+      <form
+        id='semester-creation-form'
+        onSubmit={e => {
+          e.preventDefault()
+          creationForm.handleSubmit()
+        }}
+      >
         <DialogTrigger asChild>
           <Button variant="outline">Open Dialog</Button>
         </DialogTrigger>
@@ -55,6 +68,7 @@ export function SemesterCreationDialog() {
               const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
               return (
                 <Field data-invalid={isInvalid}>
+                  <FieldLabel htmlFor="displayName">Display Name</FieldLabel>
                   <Input
                     type='text'
                     id="displayName"
@@ -77,11 +91,13 @@ export function SemesterCreationDialog() {
               const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
               return (
                 <Field data-invalid={isInvalid}>
+                  <FieldLabel htmlFor="startDate">Start Date</FieldLabel>
                   <DatePicker
                     date={field.state.value}
                     onChange={d => field.handleChange(d ?? new Date())}
                     aria-label='Start Date'
                   />
+                  {isInvalid && <FieldError errors={field.state.meta.errors} />}
                 </Field>
               )
             }}
@@ -92,11 +108,13 @@ export function SemesterCreationDialog() {
               const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
               return (
                 <Field data-invalid={isInvalid}>
+                  <FieldLabel htmlFor="endDate">End Date</FieldLabel>
                   <DatePicker
                     date={field.state.value}
                     onChange={d => field.handleChange(d ?? new Date())}
                     aria-label='End Date'
                   />
+                  {isInvalid && <FieldError errors={field.state.meta.errors} />}
                 </Field>
               )
             }}
