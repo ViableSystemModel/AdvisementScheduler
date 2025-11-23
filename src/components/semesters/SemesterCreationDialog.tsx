@@ -120,6 +120,8 @@ export function SemesterCreationDialog() {
                     date={field.state.value}
                     onChange={d => field.handleChange(d ?? new Date())}
                     onBlur={field.handleBlur}
+                    startMonth={new Date(2020, 0)}
+                    endMonth={new Date(2050, 11)}
                     aria-label='Start Date'
                   />
                   {isInvalid && <FieldError errors={field.state.meta.errors} />}
@@ -138,6 +140,8 @@ export function SemesterCreationDialog() {
                     date={field.state.value}
                     onChange={d => field.handleChange(d ?? new Date())}
                     onBlur={field.handleBlur}
+                    startMonth={new Date(2020, 0)}
+                    endMonth={new Date(2050, 11)}
                     aria-label='End Date'
                   />
                   {isInvalid && <FieldError errors={field.state.meta.errors} />}

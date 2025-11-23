@@ -56,6 +56,29 @@ export const list = query({
   }
 });
 
+export const get = query({
+  args: {
+    id: v.id('semester'),
+  },
+  handler: async (ctx, args) => {
+    const advisor = await getLoggedInAdvisor(ctx);
+    if (!advisor) {
+      throw new ConvexError('You must be an advisor to view a semester');
+    }
+
+    const semester = await ctx.db.get(args.id);
+    if (!semester) {
+      return null;
+    }
+
+    if (semester.advisorId !== advisor._id) {
+      throw new ConvexError('You can only view your own semesters');
+    }
+
+    return semester;
+  }
+});
+
 export const create = mutation({
   args: {
     displayName: v.string(),

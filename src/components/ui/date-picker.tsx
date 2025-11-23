@@ -5,7 +5,6 @@ import { ChevronDownIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
-import { Label } from "@/components/ui/label"
 import {
   Popover,
   PopoverContent,
@@ -16,6 +15,8 @@ export function DatePicker(props: {
   date?: Date
   onChange: (date?: Date) => void
   onBlur?: () => void
+  startMonth?: Date
+  endMonth?: Date
 }) {
   const [open, setOpen] = React.useState(false)
 
@@ -46,6 +47,8 @@ export function DatePicker(props: {
             setOpen(false)
             props.onBlur?.()
           }}
+          startMonth={props.startMonth}
+          endMonth={props.endMonth}
         />
       </PopoverContent>
     </Popover>

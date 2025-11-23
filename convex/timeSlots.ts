@@ -52,6 +52,83 @@ export const create = mutation({
   }
 })
 
+export const createBulk = mutation({
+  args: {
+    starts: v.array(v.number()),  // array of seconds since epoch
+    semesterId: v.optional(v.id('semester')),
+    timezone: v.optional(v.string()),  // IANA timezone string (e.g., 'America/New_York')
+  },
+  handler: async (ctx, args) => {
+    const advisor = await getLoggedInAdvisor(ctx);
+    if (!advisor) {
+      throw new ConvexError('You must be an advisor to create time slots');
+    }
+
+    const semester = await _requireSemester(ctx, args.semesterId
+      ? { semesterId: args.semesterId }
+      : { advisorId: advisor._id }
+    )
+
+    const semesterStart = DateTime.fromSeconds(semester.startDate, { zone: 'utc' });
+    const semesterEnd = DateTime.fromSeconds(semester.endDate, { zone: 'utc' });
+
+    // Validate all slots first
+    const slotsToCreate = [];
+    for (const start of args.starts) {
+      const slotStart = DateTime.fromSeconds(start, { zone: 'utc' });
+      if (!slotStart.isValid) {
+        throw new ConvexError('One or more start times are invalid');
+      }
+
+      if (slotStart.valueOf() < semesterStart.valueOf()) {
+        throw new ConvexError(`Slot at ${slotStart.toISO()} cannot start before semester starts`);
+      }
+
+      const slotEnd = slotStart.plus({ minutes: 15 });
+      if (slotEnd.valueOf() > semesterEnd.valueOf()) {
+        throw new ConvexError(`Slot at ${slotStart.toISO()} cannot end after semester ends`);
+      }
+
+      slotsToCreate.push({
+        startDateTime: slotStart.toSeconds(),
+        endDateTime: slotEnd.toSeconds(),
+      });
+    }
+
+    // Check for overlaps with existing slots
+    const existingSlots = await ctx.db.query('timeSlot')
+      .filter(q => q.eq(q.field('semesterId'), semester._id))
+      .collect();
+
+    for (const newSlot of slotsToCreate) {
+      // Check against existing slots
+      const overlapping = existingSlots.find(existing =>
+        existing.endDateTime > newSlot.startDateTime &&
+        existing.startDateTime < newSlot.endDateTime
+      );
+      if (overlapping) {
+        const overlappingStart = DateTime.fromSeconds(overlapping.startDateTime);
+        throw new ConvexError(`New slot overlaps with existing slot at ${overlappingStart.toISO()}`);
+      }
+
+      // Check against other new slots
+      const selfOverlapping = slotsToCreate.find(other =>
+        other !== newSlot &&
+        other.endDateTime > newSlot.startDateTime &&
+        other.startDateTime < newSlot.endDateTime
+      );
+      if (selfOverlapping) {
+        throw new ConvexError('Some of the selected times overlap with each other');
+      }
+    }
+
+    // Create all slots
+    return await Promise.all(slotsToCreate.map(
+      slot => ctx.db.insert('timeSlot', { semesterId: semester._id, ...slot })
+    ));
+  }
+})
+
 export const listForAdvisor = query({
   args: {
     semesterId: v.optional(v.id('semester')),

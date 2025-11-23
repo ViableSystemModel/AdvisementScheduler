@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Muted } from "../ui/typography"
 import { DateTime } from "luxon"
 import { SemesterDeletionDialog } from "./SemesterDeletionDialog"
+import { Link } from "@tanstack/react-router"
 
 export function SemesterList() {
   const semesters = useQuery(api.semesters.list)
@@ -37,7 +38,15 @@ export function SemesterList() {
           </TableRow>
         ) : semesters.map(semester => (
           <TableRow key={semester._id}>
-            <TableCell className="font-medium">{semester.displayName}</TableCell>
+            <TableCell className="font-medium">
+              <Link
+                to="/admin/semester/$semesterId"
+                params={{ semesterId: semester._id }}
+                className="hover:underline"
+              >
+                {semester.displayName}
+              </Link>
+            </TableCell>
             <TableCell>{DateTime.fromSeconds(semester.startDate).toLocaleString(DateTime.DATE_MED)}</TableCell>
             <TableCell>{DateTime.fromSeconds(semester.endDate).toLocaleString(DateTime.DATE_MED)}</TableCell>
             <TableCell className="text-right">
