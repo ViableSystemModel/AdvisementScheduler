@@ -2,7 +2,6 @@ import { useMutation } from "convex/react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { api } from "@convex/_generated/api";
 import * as v from 'valibot';
 import { useForm } from "@tanstack/react-form";
@@ -15,7 +14,7 @@ const formSchema = v.object({
   endDate: v.date(),
 })
 
-export function SemesterCreationModal() {
+export function SemesterCreationDialog() {
   const createSemester = useMutation(api.semesters.create)
   const creationForm = useForm({
     defaultValues: {
@@ -27,7 +26,7 @@ export function SemesterCreationModal() {
       onChange: formSchema,
       onSubmit: formSchema,
     },
-    onSubmit: async ({value}) => {
+    onSubmit: async ({ value }) => {
       await createSemester({
         displayName: value.displayName,
         startDate: Math.round(value.startDate.getTime() / 1000),
@@ -102,12 +101,11 @@ export function SemesterCreationModal() {
               )
             }}
           />
-          <Button type='submit' form='semester-creation-form'>Create</Button>
           <DialogFooter>
             <DialogClose asChild>
               <Button variant="outline">Cancel</Button>
             </DialogClose>
-            <Button type="submit">Save changes</Button>
+            <Button type='submit' form='semester-creation-form'>Create</Button>
           </DialogFooter>
         </DialogContent>
       </form>
