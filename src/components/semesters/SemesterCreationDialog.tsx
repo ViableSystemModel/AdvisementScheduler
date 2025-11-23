@@ -4,7 +4,8 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { Input } from "@/components/ui/input";
 import { api } from "@convex/_generated/api";
 import * as v from 'valibot';
-import { useForm } from "@tanstack/react-form";
+import { useForm } from '@tanstack/react-form'
+
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { DatePicker } from "@/components/ui/date-picker";
 import { DateTime } from "luxon";
@@ -13,11 +14,11 @@ const formSchema = v.object({
   displayName: v.pipe(v.string(), v.minLength(4)),
   startDate: v.pipe(
     v.date(),
-    v.toMinValue(DateTime.now().startOf('day').toJSDate()),
+    v.minValue(DateTime.now().startOf('day').toJSDate(), 'Start date must be today or later'),
   ),
   endDate: v.pipe(
     v.date(),
-    v.toMinValue(DateTime.now().startOf('day').toJSDate()),
+    v.minValue(DateTime.now().startOf('day').toJSDate(), 'End date must be today or later'),
   ),
 })
 
@@ -95,6 +96,7 @@ export function SemesterCreationDialog() {
                   <DatePicker
                     date={field.state.value}
                     onChange={d => field.handleChange(d ?? new Date())}
+                    onBlur={field.handleBlur}
                     aria-label='Start Date'
                   />
                   {isInvalid && <FieldError errors={field.state.meta.errors} />}
@@ -112,6 +114,7 @@ export function SemesterCreationDialog() {
                   <DatePicker
                     date={field.state.value}
                     onChange={d => field.handleChange(d ?? new Date())}
+                    onBlur={field.handleBlur}
                     aria-label='End Date'
                   />
                   {isInvalid && <FieldError errors={field.state.meta.errors} />}

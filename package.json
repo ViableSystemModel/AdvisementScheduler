@@ -40,7 +40,7 @@
     "@radix-ui/react-toggle-group": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@rjdellecese/confect": "^0.0.31",
-    "@tanstack/react-form": "^1.23.8",
+    "@tanstack/react-form": "^1.25.0",
     "@tanstack/react-router": "^1.134.13",
     "@tanstack/react-router-devtools": "^1.134.13",
     "@tanstack/valibot-adapter": "^1.134.13",

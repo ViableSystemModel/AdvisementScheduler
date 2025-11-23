@@ -15,11 +15,17 @@ import {
 export function DatePicker(props: {
   date?: Date
   onChange: (date?: Date) => void
+  onBlur?: () => void
 }) {
   const [open, setOpen] = React.useState(false)
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={(isOpen) => {
+      setOpen(isOpen)
+      if (!isOpen) {
+        props.onBlur?.()
+      }
+    }}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -38,6 +44,7 @@ export function DatePicker(props: {
           onSelect={(date) => {
             props.onChange(date)
             setOpen(false)
+            props.onBlur?.()
           }}
         />
       </PopoverContent>
