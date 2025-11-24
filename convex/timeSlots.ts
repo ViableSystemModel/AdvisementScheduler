@@ -148,9 +148,31 @@ export const listForAdvisor = query({
       .filter(q => q.eq(q.field('semesterId'), semester._id))
       .collect()
 
-    slots.sort((a, b) => a.startDateTime - b.startDateTime)
+    const meetings = await ctx.db.query('meeting')
+      .withIndex('by_semester', q => q.eq('semesterId', semester._id))
+      .collect();
 
-    return slots;
+    const timeSlotToMeetingMap = new Map(
+      meetings
+        .filter(m => m.timeSlotId !== undefined)
+        .map(m => [m.timeSlotId!, m])
+    );
+
+    const slotsWithStudent = await Promise.all(slots.map(async (slot) => {
+      const meeting = timeSlotToMeetingMap.get(slot._id);
+      let student = null;
+      if (meeting) {
+        student = await ctx.db.get(meeting.studentId);
+      }
+      return {
+        ...slot,
+        student,
+      };
+    }));
+
+    slotsWithStudent.sort((a, b) => a.startDateTime - b.startDateTime)
+
+    return slotsWithStudent;
   }
 })
 

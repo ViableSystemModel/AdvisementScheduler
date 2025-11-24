@@ -168,6 +168,7 @@ export function TimeSlotManager({ semesterId }: TimeSlotManagerProps) {
               <TableHead>Date</TableHead>
               <TableHead>Start Time</TableHead>
               <TableHead>End Time</TableHead>
+              <TableHead>Booked By</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -180,6 +181,13 @@ export function TimeSlotManager({ semesterId }: TimeSlotManagerProps) {
                   <TableCell>{start.toLocaleString(DateTime.DATE_MED)}</TableCell>
                   <TableCell>{start.toLocaleString(DateTime.TIME_SIMPLE)}</TableCell>
                   <TableCell>{end.toLocaleString(DateTime.TIME_SIMPLE)}</TableCell>
+                  <TableCell>
+                    {slot.student ? (
+                      <span className="font-medium text-green-600">{slot.student.name}</span>
+                    ) : (
+                      <span className="text-muted-foreground italic">Available</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right">
                     <Button
                       variant="ghost"

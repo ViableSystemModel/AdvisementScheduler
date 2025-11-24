@@ -150,3 +150,55 @@ export const bookMeeting = mutation({
     await Promise.all(patchPromises)
   },
 });
+
+export const listForSemester = query({
+  args: { semesterId: v.id('semester') },
+  handler: async (ctx, args) => {
+    const advisor = await getLoggedInAdvisor(ctx);
+    if (!advisor) {
+      throw new ConvexError('You must be an advisor to view meetings');
+    }
+
+    const semester = await ctx.db.get(args.semesterId);
+    if (!semester) {
+      throw new ConvexError('Semester not found');
+    }
+    if (semester.advisorId !== advisor._id) {
+      throw new ConvexError('You can only view meetings for your own semesters');
+    }
+
+    const meetings = await ctx.db.query('meeting')
+      .withIndex('by_semester', q => q.eq('semesterId', args.semesterId))
+      .collect();
+
+    // Enrich with student and time slot info
+    return await Promise.all(meetings.map(async (meeting) => {
+      const student = await ctx.db.get(meeting.studentId);
+      const timeSlot = meeting.timeSlotId ? await ctx.db.get(meeting.timeSlotId) : null;
+      return {
+        ...meeting,
+        student,
+        timeSlot,
+      };
+    }));
+  }
+});
+
+export const deleteMeeting = mutation({
+  args: { id: v.id('meeting') },
+  handler: async (ctx, args) => {
+    const advisor = await getLoggedInAdvisor(ctx);
+    if (!advisor) {
+      throw new ConvexError('You must be an advisor to delete meetings');
+    }
+    const meeting = await ctx.db.get(args.id);
+    if (!meeting) throw new ConvexError('Meeting not found');
+
+    const semester = await ctx.db.get(meeting.semesterId);
+    if (!semester || semester.advisorId !== advisor._id) {
+      throw new ConvexError('You can only delete meetings for your own semesters');
+    }
+
+    await ctx.db.delete(args.id);
+  }
+});

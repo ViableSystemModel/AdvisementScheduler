@@ -4,6 +4,7 @@ import { api } from '@convex/_generated/api'
 import { Id } from '@convex/_generated/dataModel'
 import { Spinner } from '@/components/ui/spinner'
 import { TimeSlotManager } from '@/components/time-slots/TimeSlotManager'
+import { MeetingManager } from '@/components/semesters/MeetingManager'
 import { DateTime } from 'luxon'
 
 export const Route = createFileRoute('/admin/semester/$semesterId')({
@@ -44,8 +45,7 @@ function RouteComponent() {
           <TimeSlotManager semesterId={semesterId as Id<"semester">} />
         </div>
         <div className="p-6 border rounded-lg shadow-sm">
-          <h2 className="text-xl font-semibold mb-4">Meetings</h2>
-          <p className="text-muted-foreground">Meeting management interface will go here.</p>
+          <MeetingManager semesterId={semesterId as Id<"semester">} />
         </div>
       </div>
     </div>
