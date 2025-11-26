@@ -40,7 +40,7 @@ export function SemesterList() {
           <TableRow key={semester._id}>
             <TableCell className="font-medium">
               <Link
-                to="/admin/semester/$semesterId"
+                to="/admin/semesters/$semesterId"
                 params={{ semesterId: semester._id }}
                 className="hover:underline"
               >

@@ -1,12 +1,20 @@
 import { Authenticated, Unauthenticated } from "convex/react";
 import { SignInForm } from "./SignInForm";
 import { PropsWithChildren } from "react";
+import { AdminBreadcrumbs } from "./AdminBreadcrumbs";
 
-export function AdminPage(props: PropsWithChildren) {
+interface AdminPageProps extends PropsWithChildren {
+  segmentOverrides?: Record<string, string>
+}
+
+export function AdminPage({ segmentOverrides, children }: AdminPageProps) {
   return (
     <div className="max-w-6xl mx-auto">
       <Authenticated>
-        {props.children}
+        <div className="py-4">
+          <AdminBreadcrumbs segmentOverrides={segmentOverrides} />
+        </div>
+        {children}
       </Authenticated>
       <Unauthenticated>
         <div className="max-w-md mx-auto">

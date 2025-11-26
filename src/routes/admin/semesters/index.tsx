@@ -4,7 +4,7 @@ import { H1 } from '@/components/ui/typography';
 import { SemesterList } from '@/components/semesters/SemesterList';
 import { SemesterCreationDialog } from '@/components/semesters/SemesterCreationDialog';
 
-export const Route = createFileRoute('/admin/semesters')({
+export const Route = createFileRoute('/admin/semesters/')({
   component: AdminLayout,
 })
 
