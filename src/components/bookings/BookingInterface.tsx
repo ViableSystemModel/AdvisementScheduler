@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
-import { api } from "../../convex/_generated/api";
+import { api } from "@convex/_generated/api";
 import { toast } from "sonner";
-import { Id } from "../../convex/_generated/dataModel";
+import { Id } from "@convex/_generated/dataModel";
 
 interface BookingInterfaceProps {
   meetingId: string;
@@ -102,7 +102,7 @@ export function BookingInterface({ meetingId }: BookingInterfaceProps) {
   // Filter available slots to exclude booked ones for this meeting
   const availableSlots = meeting.availableSlots
 
-  const selectedSlot = selectedSlotId 
+  const selectedSlot = selectedSlotId
     ? meeting.availableSlots.find(slot => slot && slot._id === selectedSlotId) || null
     : null;
 
@@ -133,7 +133,7 @@ export function BookingInterface({ meetingId }: BookingInterfaceProps) {
         <>
           <div className="bg-white rounded-lg border p-6 mb-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Available Time Slots</h3>
-            
+
             {availableSlots.length === 0 ? (
               <p className="text-gray-500 text-center py-8">
                 No available time slots at the moment.
@@ -146,11 +146,10 @@ export function BookingInterface({ meetingId }: BookingInterfaceProps) {
                     onClick={() => setSelectedSlotId(
                       selectedSlotId === slot._id ? null : slot._id
                     )}
-                    className={`p-4 text-left border rounded-lg transition-colors ${
-                      selectedSlotId === slot._id
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-300 hover:border-gray-400 hover:bg-gray-50"
-                    }`}
+                    className={`p-4 text-left border rounded-lg transition-colors ${selectedSlotId === slot._id
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-300 hover:border-gray-400 hover:bg-gray-50"
+                      }`}
                   >
                     <div className="font-medium text-gray-900">
                       {new Date(slot.startDateTime).toLocaleDateString([], {
@@ -171,14 +170,14 @@ export function BookingInterface({ meetingId }: BookingInterfaceProps) {
           {selectedSlot && (
             <div className="bg-white rounded-lg border p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Book This Slot</h3>
-              
+
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                 <h4 className="font-semibold text-blue-900 mb-2">Selected Time Slot</h4>
                 <p className="text-blue-800">
                   {/* {formatDateTime(selectedSlot.startDateTime)} - {formatTime(selectedSlot.endDateTime)} */}
                 </p>
               </div>
-              
+
               {!loggedInUser && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>

@@ -52,7 +52,7 @@ export function MeetingManager({ semesterId }: MeetingManagerProps) {
   }
 
   const copyLink = (meetingId: string) => {
-    const url = `${window.location.origin}/meeting/${meetingId}`
+    const url = `${window.location.origin}/meetings/${meetingId}`
     navigator.clipboard.writeText(url)
     setCopiedId(meetingId)
     toast.success("Booking link copied")
