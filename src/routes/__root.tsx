@@ -2,8 +2,10 @@ import { SignOutButton } from '@/components/SignOutButton'
 import { createRootRoute, Outlet } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 import { Toaster } from 'sonner'
+import { HeadContent } from '@tanstack/react-router'
 
-const RootLayout = () => (
+const RootLayout = () => <>
+  <HeadContent />
   <div className="min-h-screen flex flex-col bg-gray-50">
     <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm h-16 flex justify-between items-center border-b shadow-sm px-4">
       <div className="flex items-center gap-4">
@@ -17,6 +19,6 @@ const RootLayout = () => (
     <Toaster />
     <TanStackRouterDevtools />
   </div>
-)
+</>
 
 export const Route = createRootRoute({ component: RootLayout })
