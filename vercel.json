@@ -1,10 +1,5 @@
 {
-  "buildOutput": {
-    "directory": "dist"
-  },
-  "framework": null,
-  "cleanUrls": true,
-  "trailingSlash": false,
+  "outputDirectory": "dist",
   "rewrites": [
     {
       "source": "/(.*)",
