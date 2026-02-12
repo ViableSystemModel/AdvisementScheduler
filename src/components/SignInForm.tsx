@@ -1,12 +1,12 @@
 "use client";
 import { useAuthActions } from "@convex-dev/auth/react";
-import { useState } from "react";
 import { toast } from "sonner";
 import { useForm } from '@tanstack/react-form'
 import * as v from 'valibot'
 import { Field, FieldError, FieldGroup, FieldLabel } from "./ui/field";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
+import { ConvexError } from "convex/values";
 
 const formSchema = v.object({
   email: v.pipe(
@@ -29,19 +29,10 @@ export function SignInForm() {
     },
     onSubmit: async ({ value }) => {
       try {
-        await signIn('password', {...value, flow: 'signIn'})
+        await signIn('password', { ...value, flow: 'signIn' })
       } catch (e) {
-        const error = v.safeParse(
-          v.object({
-            message: v.pipe(
-              v.string(),
-              v.includes('Invalid password'),
-            ),
-          }),
-          e,
-        );
-        toast.error(error.success
-          ? 'Invalid password. Please try again.'
+        toast.error(e instanceof ConvexError
+          ? e.data
           : 'Could not sign in');
       }
     },
@@ -101,13 +92,13 @@ export function SignInForm() {
           }}
         />
         <Field orientation="horizontal">
-            <Button type="button" variant="outline" onClick={() => form.reset()}>
-              Reset
-            </Button>
-            <Button type="submit">
-              Submit
-            </Button>
-          </Field>
+          <Button type="button" variant="outline" onClick={() => form.reset()}>
+            Reset
+          </Button>
+          <Button type="submit">
+            Submit
+          </Button>
+        </Field>
       </FieldGroup>
     </form>
   );

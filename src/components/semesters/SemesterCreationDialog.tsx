@@ -66,7 +66,7 @@ export function SemesterCreationDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">Open Dialog</Button>
+        <Button variant="outline">Create Semester</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         {loading && <Spinner />}
