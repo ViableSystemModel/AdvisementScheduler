@@ -130,7 +130,7 @@ export const bookMeeting = mutation({
         ), student.email),
         phone: b.optional(b.pipe(
           b.string(),
-          b.regex(/^\+?\d{0,3}\s?[(]?\d{3}[)]?[-\s\.]?\d{3}[-\s\.]?\d{4}$/),
+          b.regex(/^\+?\d{0,3}\s?[(]?\d{3}[)]?[-\s\.]?\d{3}[-\s\.]?\d{4}$/g),
           b.transform(phone => phone.replaceAll(/\D/, ''))
         ), student.phone)
       })

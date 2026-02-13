@@ -3,17 +3,39 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { toast } from "sonner";
 import { Id } from "@convex/_generated/dataModel";
+import { useForm } from '@tanstack/react-form';
+import * as v from 'valibot';
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { ConvexError } from "convex/values";
 
 interface BookingInterfaceProps {
   meetingId: string;
 }
 
+const bookingSchema = v.object({
+  bookerPhone: v.pipe(
+    v.string(),
+    v.regex(/^\+?\d{0,3}\s?[(]?\d{3}[)]?[-\s\.]?\d{3}[-\s\.]?\d{4}$/, "Invalid phone number format")
+  ),
+  bookerEmail: v.pipe(v.string(), v.email("Invalid email address")),
+});
+
 export function BookingInterface({ meetingId }: BookingInterfaceProps) {
   const [selectedSlotId, setSelectedSlotId] = useState<Id<'timeSlot'> | null>(null);
-  const [bookerEmail, setBookerEmail] = useState('')
-  const [bookerPhone, setBookerPhone] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
 
   const meeting = useQuery(
     api.meetings.getMeeting,
@@ -23,33 +45,55 @@ export function BookingInterface({ meetingId }: BookingInterfaceProps) {
   const cancelBooking = useMutation(api.meetings.cancelBooking);
   const loggedInUser = useQuery(api.auth.loggedInUser);
 
+  const form = useForm({
+    defaultValues: {
+      bookerPhone: '',
+      bookerEmail: '',
+    },
+    validators: {
+      onBlur: bookingSchema,
+      onSubmit: bookingSchema,
+    },
+    onSubmit: async ({ value }) => {
+      if (!selectedSlotId || !meeting) return;
+
+      try {
+        await bookMeeting({
+          meetingId: meeting._id,
+          timeSlotId: selectedSlotId,
+          bookerPhone: value.bookerPhone.trim(),
+          bookerEmail: value.bookerEmail.trim(),
+        });
+
+        toast.success("Time slot booked successfully!");
+        form.reset();
+      } catch (error: any) {
+        toast.error(error instanceof ConvexError ? error.data : "Failed to book time slot");
+      }
+    },
+  });
+
   const handleBookSlot = async () => {
     if (!selectedSlotId || !meeting) return;
 
-    if (!loggedInUser && (!bookerPhone.trim() || !bookerEmail.trim())) {
-      toast.error("Please enter your name and email");
+    // If logged in, we can skip the form validation/submission for phone/email
+    // But since the original code allowed logged in users to book without phone/email,
+    // we need to handle that.
+
+    if (loggedInUser) {
+      try {
+        await bookMeeting({
+          meetingId: meeting._id,
+          timeSlotId: selectedSlotId,
+        });
+        toast.success("Time slot booked successfully!");
+      } catch (error: any) {
+        toast.error(error instanceof ConvexError ? error.data : "Failed to book time slot");
+      }
       return;
     }
 
-    setIsSubmitting(true);
-
-    try {
-      await bookMeeting({
-        meetingId: meeting._id,
-        timeSlotId: selectedSlotId,
-        bookerPhone: bookerPhone.trim() || undefined,
-        bookerEmail: bookerEmail.trim() || undefined,
-      });
-
-      toast.success("Time slot booked successfully!");
-      // Don't clear selectedSlotId - the query will refresh and show the booked state
-      setBookerPhone("");
-      setBookerEmail("");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to book time slot");
-    } finally {
-      setIsSubmitting(false);
-    }
+    form.handleSubmit();
   };
 
   const handleCancelBooking = async () => {
@@ -60,6 +104,7 @@ export function BookingInterface({ meetingId }: BookingInterfaceProps) {
     try {
       await cancelBooking({ meetingId: meeting._id });
       toast.success("Booking cancelled successfully!");
+      setIsCancelDialogOpen(false);
     } catch (error: any) {
       toast.error(error.message || "Failed to cancel booking");
     } finally {
@@ -119,7 +164,7 @@ export function BookingInterface({ meetingId }: BookingInterfaceProps) {
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">{meeting.student.name}</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Advisement meeting with {meeting.student.name}</h1>
         {/*meeting.description && (
           <p className="text-gray-600 mt-2">{meeting.description}</p>
         )*/}
@@ -132,13 +177,32 @@ export function BookingInterface({ meetingId }: BookingInterfaceProps) {
           <p className="text-green-700">
             You have booked: {formatDateTime(bookedSlot.startDateTime)} - {formatTime(bookedSlot.endDateTime)}
           </p>
-          <button
-            onClick={handleCancelBooking}
-            disabled={isCancelling}
-            className="mt-3 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isCancelling ? "Cancelling..." : "Cancel Booking"}
-          </button>
+
+          <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+            <DialogTrigger asChild>
+              <button
+                className="mt-3 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel Booking
+              </button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Cancel Booking</DialogTitle>
+                <DialogDescription>
+                  Are you sure you want to cancel this booking? This action cannot be undone.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">No, Keep Booking</Button>
+                </DialogClose>
+                <Button variant="destructive" onClick={handleCancelBooking} disabled={isCancelling}>
+                  {isCancelling ? "Cancelling..." : "Yes, Cancel Booking"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       ) : (
         <>
@@ -191,44 +255,65 @@ export function BookingInterface({ meetingId }: BookingInterfaceProps) {
 
               {!loggedInUser && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label htmlFor="bookerPhone" className="block text-sm font-medium text-gray-700 mb-1">
-                      Your Name *
-                    </label>
-                    <input
-                      type="text"
-                      id="bookerPhone"
-                      value={bookerPhone}
-                      onChange={(e) => setBookerPhone(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Enter your name"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="bookerEmail" className="block text-sm font-medium text-gray-700 mb-1">
-                      Your Email *
-                    </label>
-                    <input
-                      type="email"
-                      id="bookerEmail"
-                      value={bookerEmail}
-                      onChange={(e) => setBookerEmail(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Enter your email"
-                      required
-                    />
-                  </div>
+                  <form.Field
+                    name="bookerPhone"
+                    children={(field) => {
+                      const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                      return (
+                        <Field data-invalid={isInvalid}>
+                          <FieldLabel htmlFor="bookerPhone">Your Phone Number *</FieldLabel>
+                          <Input
+                            type="text"
+                            id="bookerPhone"
+                            name={field.name}
+                            value={field.state.value}
+                            onBlur={field.handleBlur}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            aria-invalid={isInvalid}
+                            placeholder="Enter your phone number"
+                          />
+                          {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                        </Field>
+                      );
+                    }}
+                  />
+                  <form.Field
+                    name="bookerEmail"
+                    children={(field) => {
+                      const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                      return (
+                        <Field data-invalid={isInvalid}>
+                          <FieldLabel htmlFor="bookerEmail">Your Email *</FieldLabel>
+                          <Input
+                            type="email"
+                            id="bookerEmail"
+                            name={field.name}
+                            value={field.state.value}
+                            onBlur={field.handleBlur}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            aria-invalid={isInvalid}
+                            placeholder="Enter your email"
+                          />
+                          {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                        </Field>
+                      );
+                    }}
+                  />
                 </div>
               )}
 
-              <button
-                onClick={handleBookSlot}
-                disabled={isSubmitting}
-                className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? "Booking..." : "Confirm Booking"}
-              </button>
+              <form.Subscribe
+                selector={(state) => [state.canSubmit, state.isSubmitting]}
+                children={([canSubmit, isSubmitting]) => (
+                  <Button
+                    onClick={handleBookSlot}
+                    disabled={!loggedInUser && !canSubmit}
+                    className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? "Booking..." : "Confirm Booking"}
+                  </Button>
+                )}
+              />
             </div>
           )}
         </>
