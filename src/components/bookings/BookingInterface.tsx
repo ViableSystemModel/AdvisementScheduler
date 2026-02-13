@@ -24,12 +24,16 @@ interface BookingInterfaceProps {
   meetingId: string;
 }
 
+const phoneSchema = v.pipe(
+  v.string(),
+  v.regex(/^\+?\d{0,3}\s?[(]?\d{3}[)]?[-\s\.]?\d{3}[-\s\.]?\d{4}$/, "Invalid phone number format")
+);
+
+const emailSchema = v.pipe(v.string(), v.email("Invalid email address"));
+
 const bookingSchema = v.object({
-  bookerPhone: v.pipe(
-    v.string(),
-    v.regex(/^\+?\d{0,3}\s?[(]?\d{3}[)]?[-\s\.]?\d{3}[-\s\.]?\d{4}$/, "Invalid phone number format")
-  ),
-  bookerEmail: v.pipe(v.string(), v.email("Invalid email address")),
+  bookerPhone: phoneSchema,
+  bookerEmail: emailSchema,
 });
 
 export function BookingInterface({ meetingId }: BookingInterfaceProps) {
@@ -51,7 +55,6 @@ export function BookingInterface({ meetingId }: BookingInterfaceProps) {
       bookerEmail: '',
     },
     validators: {
-      onBlur: bookingSchema,
       onSubmit: bookingSchema,
     },
     onSubmit: async ({ value }) => {
@@ -257,6 +260,9 @@ export function BookingInterface({ meetingId }: BookingInterfaceProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <form.Field
                     name="bookerPhone"
+                    validators={{
+                      onBlur: phoneSchema,
+                    }}
                     children={(field) => {
                       const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
                       return (
@@ -279,6 +285,9 @@ export function BookingInterface({ meetingId }: BookingInterfaceProps) {
                   />
                   <form.Field
                     name="bookerEmail"
+                    validators={{
+                      onBlur: emailSchema,
+                    }}
                     children={(field) => {
                       const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
                       return (
