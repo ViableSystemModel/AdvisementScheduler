@@ -13,13 +13,14 @@ export function BookingInterface({ meetingId }: BookingInterfaceProps) {
   const [bookerEmail, setBookerEmail] = useState('')
   const [bookerPhone, setBookerPhone] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const meeting = useQuery(
     api.meetings.getMeeting,
     meetingId ? { meetingId: meetingId } : "skip"
   );
   const bookMeeting = useMutation(api.meetings.bookMeeting);
-  // const cancelBooking = useMutation(api.meetings.);
+  const cancelBooking = useMutation(api.meetings.cancelBooking);
   const loggedInUser = useQuery(api.auth.loggedInUser);
 
   const handleBookSlot = async () => {
@@ -38,11 +39,10 @@ export function BookingInterface({ meetingId }: BookingInterfaceProps) {
         timeSlotId: selectedSlotId,
         bookerPhone: bookerPhone.trim() || undefined,
         bookerEmail: bookerEmail.trim() || undefined,
-        secretCode: '',  // TODO: Fix
       });
 
       toast.success("Time slot booked successfully!");
-      setSelectedSlotId(null);
+      // Don't clear selectedSlotId - the query will refresh and show the booked state
       setBookerPhone("");
       setBookerEmail("");
     } catch (error: any) {
@@ -55,16 +55,20 @@ export function BookingInterface({ meetingId }: BookingInterfaceProps) {
   const handleCancelBooking = async () => {
     if (!meeting) return;
 
+    setIsCancelling(true);
+
     try {
-      // await cancelBooking({ meetingId: meeting._id });
+      await cancelBooking({ meetingId: meeting._id });
       toast.success("Booking cancelled successfully!");
     } catch (error: any) {
       toast.error(error.message || "Failed to cancel booking");
+    } finally {
+      setIsCancelling(false);
     }
   };
 
   const formatDateTime = (dateString: number) => {
-    const date = new Date(dateString);
+    const date = new Date(dateString * 1000); // Convert seconds to milliseconds
     return date.toLocaleString([], {
       weekday: 'long',
       year: 'numeric',
@@ -76,7 +80,7 @@ export function BookingInterface({ meetingId }: BookingInterfaceProps) {
   };
 
   const formatTime = (dateString: number) => {
-    const date = new Date(dateString);
+    const date = new Date(dateString * 1000); // Convert seconds to milliseconds
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
@@ -102,6 +106,12 @@ export function BookingInterface({ meetingId }: BookingInterfaceProps) {
   // Filter available slots to exclude booked ones for this meeting
   const availableSlots = meeting.availableSlots
 
+  // Check if this meeting already has a booked time slot from the database
+  const bookedSlot = meeting.timeSlotId
+    ? meeting.availableSlots.find(slot => slot && slot._id === meeting.timeSlotId) || null
+    : null;
+
+  // For UI selection (before booking)
   const selectedSlot = selectedSlotId
     ? meeting.availableSlots.find(slot => slot && slot._id === selectedSlotId) || null
     : null;
@@ -116,17 +126,18 @@ export function BookingInterface({ meetingId }: BookingInterfaceProps) {
         <p className="text-sm text-gray-500 mt-1">Duration: 15 minutes</p>
       </div>
 
-      {selectedSlot ? (
+      {bookedSlot ? (
         <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
           <h3 className="text-lg font-semibold text-green-800 mb-2">Your Booking</h3>
           <p className="text-green-700">
-            You have booked: {formatDateTime(selectedSlot.startDateTime)} - {formatTime(selectedSlot.endDateTime)}
+            You have booked: {formatDateTime(bookedSlot.startDateTime)} - {formatTime(bookedSlot.endDateTime)}
           </p>
           <button
             onClick={handleCancelBooking}
-            className="mt-3 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition-colors"
+            disabled={isCancelling}
+            className="mt-3 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Cancel Booking
+            {isCancelling ? "Cancelling..." : "Cancel Booking"}
           </button>
         </div>
       ) : (
@@ -152,7 +163,7 @@ export function BookingInterface({ meetingId }: BookingInterfaceProps) {
                       }`}
                   >
                     <div className="font-medium text-gray-900">
-                      {new Date(slot.startDateTime).toLocaleDateString([], {
+                      {new Date(slot.startDateTime * 1000).toLocaleDateString([], {
                         weekday: 'short',
                         month: 'short',
                         day: 'numeric'
@@ -174,7 +185,7 @@ export function BookingInterface({ meetingId }: BookingInterfaceProps) {
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                 <h4 className="font-semibold text-blue-900 mb-2">Selected Time Slot</h4>
                 <p className="text-blue-800">
-                  {/* {formatDateTime(selectedSlot.startDateTime)} - {formatTime(selectedSlot.endDateTime)} */}
+                  {formatDateTime(selectedSlot.startDateTime)} - {formatTime(selectedSlot.endDateTime)}
                 </p>
               </div>
 

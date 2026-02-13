@@ -90,7 +90,6 @@ export const bookMeeting = mutation({
   args: {
     meetingId: v.id("meeting"),
     timeSlotId: v.id("timeSlot"),
-    secretCode: v.string(),
     bookerEmail: v.optional(v.string()),
     bookerPhone: v.optional(v.string())
   },
@@ -104,9 +103,6 @@ export const bookMeeting = mutation({
     }
     if (!timeSlot) {
       throw new ConvexError('Time slot not found')
-    }
-    if (meeting.secretCode !== args.secretCode) {
-      throw new ConvexError('Incorrect secret code')
     }
     if (meeting.semesterId !== timeSlot.semesterId) {
       throw new ConvexError('Semesters are mismatched')
@@ -148,6 +144,23 @@ export const bookMeeting = mutation({
       patchPromises.push(ctx.db.patch(student._id, result.output))
     }
     await Promise.all(patchPromises)
+  },
+});
+
+export const cancelBooking = mutation({
+  args: {
+    meetingId: v.id("meeting"),
+  },
+  handler: async (ctx, args) => {
+    const meeting = await ctx.db.get(args.meetingId);
+    if (!meeting) {
+      throw new ConvexError('Meeting not found');
+    }
+    if (!meeting.timeSlotId) {
+      throw new ConvexError('No booking to cancel');
+    }
+
+    await ctx.db.patch(meeting._id, { timeSlotId: undefined });
   },
 });
 
