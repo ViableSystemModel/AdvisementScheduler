@@ -7,6 +7,7 @@ import { TimeSlotManager } from '@/components/time-slots/TimeSlotManager'
 import { MeetingManager } from '@/components/semesters/MeetingManager'
 import { DateTime } from 'luxon'
 import { AdminPage } from '@/components/AdminPage'
+import { MeetingCalendar } from '@/components/semesters/MeetingCalendar'
 
 export const Route = createFileRoute('/admin/semesters/$semesterId')({
   component: RouteComponent,
@@ -42,6 +43,10 @@ function RouteComponent() {
           </p>
         </div>
 
+        <div>
+          <MeetingCalendar semesterId={semesterId as Id<"semester">} />
+        </div>
+
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="p-6 border rounded-lg shadow-sm">
             <TimeSlotManager semesterId={semesterId as Id<"semester">} />
@@ -54,3 +59,4 @@ function RouteComponent() {
     </AdminPage>
   )
 }
+
