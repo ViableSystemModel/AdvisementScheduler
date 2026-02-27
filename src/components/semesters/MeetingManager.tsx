@@ -73,10 +73,12 @@ export function MeetingManager({ semesterId }: MeetingManagerProps) {
     )
     : meetings
 
+  const bookedMeetings = meetings.filter((m) => m.timeSlot).length
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Meetings ({meetings.length})</h2>
+        <h2 className="text-xl font-semibold">Meetings ({bookedMeetings}/{meetings.length})</h2>
         <CreateMeetingDialog semesterId={semesterId} />
       </div>
 
