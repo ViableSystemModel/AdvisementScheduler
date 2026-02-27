@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Field, FieldLabel } from "@/components/ui/field"
+import { ButtonGroup } from "../ui/button-group"
 
 interface MeetingManagerProps {
   semesterId: Id<"semester">
@@ -37,6 +38,7 @@ export function MeetingManager({ semesterId }: MeetingManagerProps) {
   const deleteMeeting = useMutation(api.meetings.deleteMeeting)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [search, setSearch] = useState("")
+  const [showType, setShowType] = useState<"all" | "booked" | "pending">("all")
 
   const handleDelete = async (meetingId: Id<"meeting">) => {
     if (!confirm("Are you sure you want to delete this meeting?")) return
@@ -65,21 +67,53 @@ export function MeetingManager({ semesterId }: MeetingManagerProps) {
     return <Spinner />
   }
 
+  const meetingsByType = meetings.filter((m) => {
+    if (showType === "all") return true
+    if (showType === "booked") return !!m.timeSlot
+    if (showType === "pending") return !m.timeSlot
+    return true
+  })
   const filteredMeetings = search.trim()
-    ? meetings.filter((m) =>
+    ? meetingsByType.filter((m) =>
       (m.student?.name ?? "Unknown Student")
         .toLowerCase()
-        .includes(search.toLowerCase())
+        .includes(search.trim().toLowerCase())
     )
-    : meetings
+    : meetingsByType
 
-  const bookedMeetings = meetings.filter((m) => m.timeSlot).length
+  const bookedMeetings = meetingsByType.filter((m) => m.timeSlot).length
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Meetings ({bookedMeetings}/{meetings.length})</h2>
+        <h2 className="text-xl font-semibold">Meetings ({bookedMeetings}/{meetingsByType.length})</h2>
         <CreateMeetingDialog semesterId={semesterId} />
+      </div>
+
+      <div className="w-full">
+        <ButtonGroup className="w-full">
+          <Button
+            variant={showType === "all" ? "default" : "outline"}
+            className={showType === "all" ? "text-white" : ""}
+            onClick={() => setShowType("all")}
+          >
+            All
+          </Button>
+          <Button
+            variant={showType === "booked" ? "default" : "outline"}
+            className={showType === "booked" ? "text-white" : ""}
+            onClick={() => setShowType("booked")}
+          >
+            Booked
+          </Button>
+          <Button
+            variant={showType === "pending" ? "default" : "outline"}
+            className={showType === "pending" ? "text-white" : ""}
+            onClick={() => setShowType("pending")}
+          >
+            Pending
+          </Button>
+        </ButtonGroup>
       </div>
 
       <div className="relative">
