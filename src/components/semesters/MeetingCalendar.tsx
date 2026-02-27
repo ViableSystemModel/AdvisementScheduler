@@ -11,12 +11,19 @@ export function MeetingCalendar({ semesterId }: { semesterId: Id<'semester'> }) 
     plugins={[timeGridPlugin, dayGridPlugin]}
     initialView='timeGridWeek'
     weekends={true}
-    height='500px'
-    events={meetings ?? []}
-    eventContent={event => (
-      <div>
-        {event.event.extendedProps.student?.name || 'Meeting'}
-      </div>
-    )}
+    events={(meetings ?? []).map(meeting => ({
+      title: meeting.student?.name || 'Meeting',
+      start: meeting.timeSlot?.startDateTime
+        ? new Date(meeting.timeSlot?.startDateTime * 1000)
+        : undefined,
+      end: meeting.timeSlot?.endDateTime
+        ? new Date(meeting.timeSlot?.endDateTime * 1000)
+        : undefined,
+      extendedProps: {
+        student: meeting.student
+      }
+    }))}
+    contentHeight='500px'
+    eventContent={event => event.event.title}
   />
 }
