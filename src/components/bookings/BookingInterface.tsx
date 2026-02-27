@@ -21,7 +21,7 @@ import {
 import { ConvexError } from "convex/values";
 
 interface BookingInterfaceProps {
-  meetingId: string;
+  meetingId: Id<'meeting'>;
 }
 
 const phoneSchema = v.pipe(

@@ -113,10 +113,10 @@ export function MeetingManager({ semesterId }: MeetingManagerProps) {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => copyLink(meeting.secretCode)}
+                        onClick={() => copyLink(meeting._id)}
                         title="Copy Booking Link"
                       >
-                        {copiedId === meeting.secretCode ? (
+                        {copiedId === meeting._id ? (
                           <Check className="h-4 w-4 text-green-600" />
                         ) : (
                           <Copy className="h-4 w-4" />

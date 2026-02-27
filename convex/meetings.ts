@@ -43,11 +43,9 @@ export const createMeeting = mutation({
 });
 
 export const getMeeting = query({
-  args: { meetingId: v.string() },
+  args: { meetingId: v.id('meeting') },
   handler: async (ctx, args) => {
-    const meeting = await ctx.db.query('meeting')
-      .filter(q => q.eq(q.field('secretCode'), args.meetingId))
-      .first();
+    const meeting = await ctx.db.get(args.meetingId);
     if (!meeting) {
       return null
     }
