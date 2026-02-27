@@ -49,10 +49,10 @@ function RouteComponent() {
 
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="p-6 border rounded-lg shadow-sm">
-            <TimeSlotManager semesterId={semesterId as Id<"semester">} />
+            <MeetingManager semesterId={semesterId as Id<"semester">} />
           </div>
           <div className="p-6 border rounded-lg shadow-sm">
-            <MeetingManager semesterId={semesterId as Id<"semester">} />
+            <TimeSlotManager semesterId={semesterId as Id<"semester">} />
           </div>
         </div>
       </div>
