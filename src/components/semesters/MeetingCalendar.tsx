@@ -23,6 +23,8 @@ export function MeetingCalendar({ semesterId }: { semesterId: Id<'semester'> }) 
         student: meeting.student
       }
     }))}
+    slotDuration='00:15:00'
+    slotLabelInterval='01:00'
     contentHeight='500px'
     eventContent={event => event.event.title}
   />
