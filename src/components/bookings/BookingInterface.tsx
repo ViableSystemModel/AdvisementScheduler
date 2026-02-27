@@ -19,6 +19,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ConvexError } from "convex/values";
+import { ScheduleMeeting } from 'react-schedule-meeting';
 
 interface BookingInterfaceProps {
   meetingId: Id<'meeting'>;
@@ -154,6 +155,12 @@ export function BookingInterface({ meetingId }: BookingInterfaceProps) {
   // Filter available slots to exclude booked ones for this meeting
   const availableSlots = meeting.availableSlots
 
+  const mappedAvailableTimeslots = availableSlots.map(slot => ({
+    id: slot._id,
+    startTime: new Date(slot.startDateTime * 1000),
+    endTime: new Date(slot.endDateTime * 1000),
+  }));
+
   // Check if this meeting already has a booked time slot from the database
   const bookedSlot = meeting.timeSlotId
     ? meeting.availableSlots.find(slot => slot && slot._id === meeting.timeSlotId) || null
@@ -217,31 +224,18 @@ export function BookingInterface({ meetingId }: BookingInterfaceProps) {
                 No available time slots at the moment.
               </p>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {availableSlots.map((slot) => (
-                  <button
-                    key={slot._id}
-                    onClick={() => setSelectedSlotId(
-                      selectedSlotId === slot._id ? null : slot._id
-                    )}
-                    className={`p-4 text-left border rounded-lg transition-colors ${selectedSlotId === slot._id
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-gray-300 hover:border-gray-400 hover:bg-gray-50"
-                      }`}
-                  >
-                    <div className="font-medium text-gray-900">
-                      {new Date(slot.startDateTime * 1000).toLocaleDateString([], {
-                        weekday: 'short',
-                        month: 'short',
-                        day: 'numeric'
-                      })}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {formatTime(slot.startDateTime)} - {formatTime(slot.endDateTime)}
-                    </div>
-                  </button>
-                ))}
-              </div>
+              <ScheduleMeeting
+                borderRadius={10}
+                primaryColor="#2563eb"
+                eventDurationInMinutes={15}
+                availableTimeslots={mappedAvailableTimeslots}
+                onStartTimeSelect={(e) => {
+                  const slotId = e.availableTimeslot.id as Id<'timeSlot'>;
+                  setSelectedSlotId(
+                    selectedSlotId === slotId ? null : slotId
+                  )
+                }}
+              />
             )}
           </div>
 
