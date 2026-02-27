@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Spinner } from "@/components/ui/spinner"
 import { DateTime } from "luxon"
-import { Trash2, Plus, Copy, Check } from "lucide-react"
+import { Trash2, Plus, Copy, Check, Search } from "lucide-react"
 import { useState } from "react"
+import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 import { ConvexError } from "convex/values"
 import {
@@ -35,6 +36,7 @@ export function MeetingManager({ semesterId }: MeetingManagerProps) {
   const meetings = useQuery(api.meetings.listForSemester, { semesterId })
   const deleteMeeting = useMutation(api.meetings.deleteMeeting)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [search, setSearch] = useState("")
 
   const handleDelete = async (meetingId: Id<"meeting">) => {
     if (!confirm("Are you sure you want to delete this meeting?")) return
@@ -63,16 +65,34 @@ export function MeetingManager({ semesterId }: MeetingManagerProps) {
     return <Spinner />
   }
 
+  const filteredMeetings = search.trim()
+    ? meetings.filter((m) =>
+      (m.student?.name ?? "Unknown Student")
+        .toLowerCase()
+        .includes(search.toLowerCase())
+    )
+    : meetings
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Meetings</h2>
+        <h2 className="text-xl font-semibold">Meetings ({meetings.length})</h2>
         <CreateMeetingDialog semesterId={semesterId} />
       </div>
 
-      {meetings.length === 0 ? (
+      <div className="relative">
+        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search by student name…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-8 max-w-sm"
+        />
+      </div>
+
+      {filteredMeetings.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
-          No meetings created yet. Create one to invite a student.
+          {search.trim() ? "No meetings match your search." : "No meetings created yet. Create one to invite a student."}
         </div>
       ) : (
         <Table>
@@ -85,7 +105,7 @@ export function MeetingManager({ semesterId }: MeetingManagerProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {meetings.map((meeting) => {
+            {filteredMeetings.map((meeting) => {
               const isBooked = !!meeting.timeSlot
               const startTime = meeting.timeSlot
                 ? DateTime.fromSeconds(meeting.timeSlot.startDateTime)

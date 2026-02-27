@@ -107,7 +107,7 @@ export function TimeSlotManager({ semesterId }: TimeSlotManagerProps) {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Time Slots</h2>
+        <h2 className="text-xl font-semibold">Time Slots ({timeSlots.length})</h2>
         <Dialog open={open} onOpenChange={(isOpen) => {
           setOpen(isOpen)
           if (!isOpen) {
