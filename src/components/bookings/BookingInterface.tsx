@@ -240,8 +240,15 @@ export function BookingInterface({ meetingId }: BookingInterfaceProps) {
           </div>
 
           {selectedSlot && (
-            <div className="bg-white rounded-lg border p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Book This Slot</h3>
+            <div className="bg-white rounded-lg border p-6 fixed bottom-0 left-0 right-0">
+              <div className="flex justify-between items-start">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Book This Slot</h3>
+                <Button
+                  variant="destructive"
+                  className="text-white mb-6"
+                  onClick={() => setSelectedSlotId(null)}
+                >Cancel</Button>
+              </div>
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                 <h4 className="font-semibold text-blue-900 mb-2">Selected Time Slot</h4>
