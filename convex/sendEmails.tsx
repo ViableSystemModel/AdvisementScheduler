@@ -25,7 +25,7 @@ export const sendEmail = internalMutation({
   },
   handler: async (ctx, { ownerId, to, subject, html, replyTo }) => {
     const emailId = await resend.sendEmail(ctx, {
-      from: "Advisement Scheduler <no-reply@advisement-scheduler.vercel.app>",
+      from: "Advisement Scheduler <no-reply@advisementscheduler.com>",
       to,
       subject,
       html,
@@ -71,8 +71,11 @@ export const sendStudentEmail = action({
     if (!meeting) throw new Error("Meeting not found");
     if (!meeting.student.email) throw new Error("Student does not have an email address");
 
+    const siteUrl = process.env.SITE_URL;
+    if (!siteUrl) throw new Error("SITE_URL is not defined");
+
     const advisorName = meeting.advisor.name || "your advisor";
-    const meetingLink = `${process.env.HOST_URL || "http://localhost:5173"}/meetings/${meeting._id}`;
+    const meetingLink = `${siteUrl}/meetings/${meeting._id}`;
 
     const html = await render(
       <StudentNotification
