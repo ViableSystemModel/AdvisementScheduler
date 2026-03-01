@@ -36,6 +36,29 @@ const applicationTables = {
     .index('by_time_slot', ['timeSlotId'])
     .index('by_secret_code', ['secretCode'])
     .index('by_student_semester_and_slot', ['studentId', 'semesterId', 'timeSlotId']),
+
+  email: defineTable({
+    ownerId: v.id('users'),
+    emailId: v.string(),
+    status: v.union(
+      v.literal('email.queued'),
+      v.literal('email.sent'),
+      v.literal('email.delivered'),
+      v.literal('email.delivery_delayed'),
+      v.literal('email.complained'),
+      v.literal('email.bounced'),
+      v.literal('email.opened'),
+      v.literal('email.clicked'),
+      v.literal('email.failed'),
+    ),
+    to: v.string(),
+    subject: v.string(),
+    html: v.string(),
+    replyTo: v.optional(v.array(v.string())),
+  }).index('by_owner', ['ownerId'])
+    .index('by_email_id', ['emailId'])
+    .index('by_status', ['status'])
+    .index('by_to', ['to'])
 };
 
 export default defineSchema({
