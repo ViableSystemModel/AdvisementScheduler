@@ -1,11 +1,11 @@
-import { useMutation, useQuery } from "convex/react"
+import { useMutation, useQuery, useAction } from "convex/react"
 import { api } from "@convex/_generated/api"
 import { Id } from "@convex/_generated/dataModel"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Spinner } from "@/components/ui/spinner"
 import { DateTime } from "luxon"
-import { Trash2, Plus, Copy, Check, Search } from "lucide-react"
+import { Trash2, Plus, Copy, Check, Search, Mail } from "lucide-react"
 import { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
@@ -178,6 +178,12 @@ export function MeetingManager({ semesterId }: MeetingManagerProps) {
                           <Copy className="h-4 w-4" />
                         )}
                       </Button>
+                      <SendEmailButton
+                        meetingId={meeting._id}
+                        studentName={meeting.student?.name || "Unknown Student"}
+                        studentEmail={meeting.student?.email || ""}
+                        hasEmail={!!meeting.student?.email}
+                      />
                       <Button
                         variant="ghost"
                         size="icon"
@@ -284,4 +290,98 @@ function CreateMeetingDialog({ semesterId }: { semesterId: Id<"semester"> }) {
       </DialogContent>
     </Dialog>
   )
+}
+
+function SendEmailButton({
+  meetingId,
+  studentName,
+  studentEmail,
+  hasEmail
+}: {
+  meetingId: Id<"meeting">,
+  studentName: string,
+  studentEmail: string,
+  hasEmail: boolean
+}) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const sendEmail = useAction(api.sendEmails.sendStudentEmail);
+  const history = useQuery(api.sendEmails.listEmailsByTo, studentEmail ? { to: studentEmail } : "skip");
+
+  const handleSend = async () => {
+    setLoading(true);
+    try {
+      await sendEmail({ meetingId });
+      toast.success("Email sent successfully");
+      setOpen(false);
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : "Failed to send email");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon" title={hasEmail ? "Send Email Notification" : "Student has no email"} disabled={!hasEmail}>
+          <Mail className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Send Email Notification</DialogTitle>
+          <DialogDescription>
+            Are you sure you want to send a booking link email to {studentName}?
+          </DialogDescription>
+        </DialogHeader>
+
+        {history && history.length > 0 && (
+          <div className="mt-4">
+            <h4 className="text-sm font-medium mb-2">Previous emails sent to {studentEmail}</h4>
+            <div className="border rounded-md overflow-hidden bg-muted/20">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Subject</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {history.map((email) => {
+                    const isSuccess = email.status === "email.delivered" || email.status === "email.opened" || email.status === "email.clicked"
+                    const isError = email.status === "email.bounced" || email.status === "email.failed" || email.status === "email.complained"
+                    const displayStatus = email.status.replace("email.", "").replace("_", " ")
+
+                    return (
+                      <TableRow key={email._id}>
+                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                          {DateTime.fromMillis(email._creationTime).toLocaleString(DateTime.DATETIME_SHORT)}
+                        </TableCell>
+                        <TableCell className="text-xs">{email.subject}</TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium capitalize ${isSuccess ? "bg-green-100 text-green-800" :
+                              isError ? "bg-red-100 text-red-800" :
+                                "bg-yellow-100 text-yellow-800"
+                            }`}>
+                            {displayStatus}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        )}
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button onClick={handleSend} disabled={loading}>{loading ? "Sending..." : "Send Email"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }

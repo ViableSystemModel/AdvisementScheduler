@@ -1,5 +1,7 @@
 import { ConvexError, v } from "convex/values";
 import { query, mutation } from "./_generated/server";
+import { internal } from "./_generated/api";
+import { DateTime } from "luxon";
 import { getLoggedInAdvisor } from "./auth";
 import { _requireSemester } from "./semesters";
 import * as b from 'valibot';
@@ -142,6 +144,10 @@ export const bookMeeting = mutation({
       patchPromises.push(ctx.db.patch(student._id, result.output))
     }
     await Promise.all(patchPromises)
+
+    await ctx.scheduler.runAfter(0, internal.sendEmails.sendMeetingBookedEmail, {
+      meetingId: meeting._id
+    });
   },
 });
 
@@ -158,7 +164,18 @@ export const cancelBooking = mutation({
       throw new ConvexError('No booking to cancel');
     }
 
+    const oldTimeSlot = await ctx.db.get(meeting.timeSlotId);
+    let oldMeetingDateTime = "";
+    if (oldTimeSlot) {
+      oldMeetingDateTime = DateTime.fromSeconds(oldTimeSlot.startDateTime).toLocaleString(DateTime.DATETIME_MED);
+    }
+
     await ctx.db.patch(meeting._id, { timeSlotId: undefined });
+
+    await ctx.scheduler.runAfter(0, internal.sendEmails.sendMeetingCancelledEmail, {
+      meetingId: meeting._id,
+      oldMeetingDateTime
+    });
   },
 });
 
