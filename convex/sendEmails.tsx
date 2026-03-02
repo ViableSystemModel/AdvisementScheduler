@@ -97,58 +97,54 @@ export const sendStudentEmail = action({
 export const sendMeetingBookedEmail = internalAction({
   args: { meetingId: v.id("meeting") },
   handler: async (ctx, args) => {
-    // TODO: Figure out why emails aren't sending
+    const meeting = await ctx.runQuery(api.meetings.getMeeting, { meetingId: args.meetingId });
+    if (!meeting) throw new Error("Meeting not found");
+    if (!meeting.advisor.email) return;
 
-    // const meeting = await ctx.runQuery(api.meetings.getMeeting, { meetingId: args.meetingId });
-    // if (!meeting) throw new Error("Meeting not found");
-    // if (!meeting.advisor.email) return;
+    const timeSlot = meeting.timeSlotId ? meeting.availableSlots.find((s: any) => s._id === meeting.timeSlotId) : null;
+    let meetingDateTime = "";
+    if (timeSlot) {
+      meetingDateTime = DateTime.fromSeconds(timeSlot.startDateTime).toLocaleString(DateTime.DATETIME_MED);
+    }
 
-    // const timeSlot = meeting.timeSlotId ? meeting.availableSlots.find((s: any) => s._id === meeting.timeSlotId) : null;
-    // let meetingDateTime = "";
-    // if (timeSlot) {
-    //   meetingDateTime = DateTime.fromSeconds(timeSlot.startDateTime).toLocaleString(DateTime.DATETIME_MED);
-    // }
+    const html = await render(
+      <AdvisorNotification
+        studentName={meeting.student.name}
+        studentEmail={meeting.student.email || ""}
+        meetingDateTime={meetingDateTime}
+      />
+    );
 
-    // const html = await render(
-    //   <AdvisorNotification
-    //     studentName={meeting.student.name}
-    //     studentEmail={meeting.student.email || ""}
-    //     meetingDateTime={meetingDateTime}
-    //   />
-    // );
-
-    // await ctx.runMutation(internal.sendEmails.sendEmail, {
-    //   ownerId: meeting.advisor._id,
-    //   to: meeting.advisor.email,
-    //   subject: `${meeting.student.name} scheduled an advisement meeting`,
-    //   html,
-    // });
+    await ctx.runMutation(internal.sendEmails.sendEmail, {
+      ownerId: meeting.advisor._id,
+      to: meeting.advisor.email,
+      subject: `${meeting.student.name} scheduled an advisement meeting`,
+      html,
+    });
   }
 });
 
 export const sendMeetingCancelledEmail = internalAction({
   args: { meetingId: v.id("meeting"), oldMeetingDateTime: v.string() },
   handler: async (ctx, args) => {
-    // TODO: Figure out why emails aren't sending
+    const meeting = await ctx.runQuery(api.meetings.getMeeting, { meetingId: args.meetingId });
+    if (!meeting) throw new Error("Meeting not found");
+    if (!meeting.advisor.email) return;
 
-    // const meeting = await ctx.runQuery(api.meetings.getMeeting, { meetingId: args.meetingId });
-    // if (!meeting) throw new Error("Meeting not found");
-    // if (!meeting.advisor.email) return;
+    const html = await render(
+      <AdvisorNotification
+        studentName={meeting.student.name}
+        studentEmail={meeting.student.email || ""}
+        oldMeetingDateTime={args.oldMeetingDateTime}
+      />
+    );
 
-    // const html = await render(
-    //   <AdvisorNotification
-    //     studentName={meeting.student.name}
-    //     studentEmail={meeting.student.email || ""}
-    //     oldMeetingDateTime={args.oldMeetingDateTime}
-    //   />
-    // );
-
-    // await ctx.runMutation(internal.sendEmails.sendEmail, {
-    //   ownerId: meeting.advisor._id,
-    //   to: meeting.advisor.email,
-    //   subject: `${meeting.student.name} cancelled an advisement meeting`,
-    //   html,
-    // });
+    await ctx.runMutation(internal.sendEmails.sendEmail, {
+      ownerId: meeting.advisor._id,
+      to: meeting.advisor.email,
+      subject: `${meeting.student.name} cancelled an advisement meeting`,
+      html,
+    });
   }
 });
 
