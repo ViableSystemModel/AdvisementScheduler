@@ -18,12 +18,10 @@ function capitalize(str: string) {
 export default function StudentNotification({
   studentName = "Student",
   advisorName = "your advisor",
-  advisorEmail = "",
   meetingLink = "https://advisement-scheduler.vercel.app",
 }: {
   studentName: string;
   advisorName: string;
-  advisorEmail: string;
   meetingLink: string;
 }) {
   return (
@@ -64,17 +62,7 @@ export default function StudentNotification({
           <Hr style={divider} />
 
           <Text style={footerNote}>
-            Questions? Reply to this email or contact your advisor directly
-            {advisorEmail ? (
-              <>
-                {" "}at{" "}
-                <Link href={`mailto:${advisorEmail}`} style={linkStyle}>
-                  {advisorEmail}
-                </Link>
-              </>
-            ) : (
-              "."
-            )}
+            Questions? Please contact your advisor directly
           </Text>
         </Container>
 

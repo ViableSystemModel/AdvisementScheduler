@@ -74,7 +74,10 @@ export const getMeeting = query({
     }
 
     const bookedSlots = allMeetings.map(slot => slot.timeSlotId).filter(id => id != null)
-    const availableSlots = allSlots.filter(slot => !bookedSlots.includes(slot._id) || slot._id === meeting.timeSlotId)
+    const availableSlots = allSlots.filter(slot => (
+      (!bookedSlots.includes(slot._id) || slot._id === meeting.timeSlotId)
+      && DateTime.fromSeconds(slot.startDateTime).toSeconds() > DateTime.now().toSeconds()
+    ))
 
     return {
       ...meeting,
