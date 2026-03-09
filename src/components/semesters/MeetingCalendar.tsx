@@ -16,6 +16,7 @@ export function MeetingCalendar({ semesterId }: { semesterId: Id<'semester'> }) 
     plugins={[timeGridPlugin, dayGridPlugin]}
     initialView='timeGridWeek'
     weekends={true}
+    nowIndicator={true}
     events={[
       ...(meetings ?? []).map(meeting => ({
         title: meeting.student.name,
