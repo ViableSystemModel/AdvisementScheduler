@@ -24,7 +24,9 @@ const applicationTables = {
     email: v.optional(v.string()),
     phone: v.optional(v.string()),
     advisorId: v.id('users'),
+    archived: v.optional(v.boolean()),
   }).index('by_advisor', ['advisorId']),
+
 
   meeting: defineTable({
     studentId: v.id('student'),

@@ -3,7 +3,10 @@ import { getLoggedInAdvisor } from './auth';
 import { mutation, query } from './_generated/server';
 
 export const list = query({
-  handler: async (ctx) => {
+  args: {
+    includeArchived: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
     const advisor = await getLoggedInAdvisor(ctx);
     if (!advisor) {
       throw new ConvexError('You must be an advisor to view students');
@@ -13,7 +16,11 @@ export const list = query({
       .withIndex('by_advisor', q => q.eq('advisorId', advisor._id))
       .collect();
 
-    return await Promise.all(students.map(async (student) => {
+    const filteredStudents = args.includeArchived 
+      ? students 
+      : students.filter(s => !s.archived);
+
+    return await Promise.all(filteredStudents.map(async (student) => {
       const meetings = await ctx.db.query('meeting')
         .withIndex('by_student', q => q.eq('studentId', student._id))
         .collect();
@@ -110,5 +117,29 @@ export const deleteStudent = mutation({
     }
 
     await ctx.db.delete(args.id);
+  }
+});
+
+export const toggleArchive = mutation({
+  args: {
+    id: v.id('student'),
+    archived: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const advisor = await getLoggedInAdvisor(ctx);
+    if (!advisor) {
+      throw new ConvexError('You must be an advisor to modify a student');
+    }
+
+    const student = await ctx.db.get(args.id);
+    if (!student) {
+      throw new ConvexError('Student not found');
+    }
+
+    if (student.advisorId !== advisor._id) {
+      throw new ConvexError('You can only modify your own students');
+    }
+
+    await ctx.db.patch(args.id, { archived: args.archived });
   }
 });

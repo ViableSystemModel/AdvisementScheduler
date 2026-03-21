@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { ConvexError } from 'convex/values';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Archive, ArchiveRestore } from 'lucide-react';
 import { Field, FieldLabel, FieldError } from '@/components/ui/field';
 import { useForm } from '@tanstack/react-form';
 import * as v from 'valibot';
@@ -273,8 +273,9 @@ function EditStudentDialog({ student }: { student: typeof api.students.list._ret
 }
 
 function StudentList() {
-  const students = useQuery(api.students.list)
+  const students = useQuery(api.students.list, { includeArchived: true })
   const deleteStudent = useMutation(api.students.deleteStudent)
+  const toggleArchive = useMutation(api.students.toggleArchive)
 
   const handleDelete = async (id: Id<'student'>) => {
     if (!confirm('Are you sure you want to delete this student?')) return
@@ -283,6 +284,15 @@ function StudentList() {
       toast.success('Student deleted')
     } catch (error) {
       toast.error('Failed to delete student')
+    }
+  }
+
+  const handleToggleArchive = async (id: Id<'student'>, currentlyArchived: boolean) => {
+    try {
+      await toggleArchive({ id, archived: !currentlyArchived })
+      toast.success(currentlyArchived ? 'Student unarchived' : 'Student archived')
+    } catch (error) {
+      toast.error('Failed to update student archive status')
     }
   }
 
@@ -312,7 +322,16 @@ function StudentList() {
       <TableBody>
         {students.map((student) => (
           <TableRow key={student._id}>
-            <TableCell className="font-medium">{student.name}</TableCell>
+            <TableCell className="font-medium">
+              <div className="flex items-center gap-2">
+                {student.name}
+                {student.archived && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-800">
+                    Archived
+                  </span>
+                )}
+              </div>
+            </TableCell>
             <TableCell>{student.email || '-'}</TableCell>
             <TableCell>{student.phone || '-'}</TableCell>
             <TableCell>
@@ -328,8 +347,21 @@ function StudentList() {
                 <Button
                   variant="ghost"
                   size="icon"
+                  onClick={() => handleToggleArchive(student._id, !!student.archived)}
+                  title={student.archived ? "Unarchive" : "Archive"}
+                >
+                  {student.archived ? (
+                    <ArchiveRestore className="h-4 w-4" />
+                  ) : (
+                    <Archive className="h-4 w-4" />
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => handleDelete(student._id)}
                   className="text-destructive hover:text-destructive/90"
+                  title="Delete"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
