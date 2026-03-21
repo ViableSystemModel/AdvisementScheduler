@@ -58,7 +58,11 @@ const applicationTables = {
   }).index('by_owner', ['ownerId'])
     .index('by_email_id', ['emailId'])
     .index('by_status', ['status'])
-    .index('by_to', ['to'])
+    .index('by_to', ['to']),
+
+  advisorWhitelist: defineTable({
+    email: v.string(),
+  }).index('by_email', ['email']),
 };
 
 export default defineSchema({

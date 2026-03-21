@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as advisorWhitelist from "../advisorWhitelist.js";
 import type * as auth from "../auth.js";
 import type * as http from "../http.js";
 import type * as meetings from "../meetings.js";
@@ -25,6 +26,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  advisorWhitelist: typeof advisorWhitelist;
   auth: typeof auth;
   http: typeof http;
   meetings: typeof meetings;
