@@ -183,7 +183,13 @@ export const cancelBooking = mutation({
 });
 
 export const listForSemester = query({
-  args: { semesterId: v.id('semester') },
+  args: {
+    semesterId: v.id('semester'),
+    sortBy: v.optional(v.union(
+      v.literal('first-name'),
+      v.literal('last-name'),
+    )),
+  },
   handler: async (ctx, args) => {
     const advisor = await getLoggedInAdvisor(ctx);
     if (!advisor) {
@@ -203,7 +209,7 @@ export const listForSemester = query({
       .collect();
 
     // Enrich with student and time slot info
-    return await Promise.all(meetings.map(async (meeting) => {
+    const meetingsButBetter = await Promise.all(meetings.map(async (meeting) => {
       const student = await ctx.db.get(meeting.studentId);
       const timeSlot = meeting.timeSlotId ? await ctx.db.get(meeting.timeSlotId) : null;
       return {
@@ -212,8 +218,18 @@ export const listForSemester = query({
         timeSlot,
       };
     }));
+
+    if (args.sortBy === 'first-name') {
+      meetingsButBetter.sort((a, b) => a.student?.name.localeCompare(b.student?.name ?? '') ?? 0);
+    } else if (args.sortBy === 'last-name') {
+      meetingsButBetter.sort((a, b) => lastName(a.student?.name ?? '').localeCompare(lastName(b.student?.name ?? '')));
+    }
+
+    return meetingsButBetter;
   }
 });
+
+const lastName = (name: string) => name.split(' ').pop() ?? name;
 
 export const deleteMeeting = mutation({
   args: { id: v.id('meeting') },

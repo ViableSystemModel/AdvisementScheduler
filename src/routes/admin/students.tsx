@@ -273,7 +273,7 @@ function EditStudentDialog({ student }: { student: typeof api.students.list._ret
 }
 
 function StudentList() {
-  const students = useQuery(api.students.list, { includeArchived: true })
+  const students = useQuery(api.students.list, { includeArchived: true, sortBy: 'last-name' })
   const deleteStudent = useMutation(api.students.deleteStudent)
   const toggleArchive = useMutation(api.students.toggleArchive)
 

@@ -34,7 +34,7 @@ interface MeetingManagerProps {
 }
 
 export function MeetingManager({ semesterId }: MeetingManagerProps) {
-  const meetings = useQuery(api.meetings.listForSemester, { semesterId })
+  const meetings = useQuery(api.meetings.listForSemester, { semesterId, sortBy: 'last-name' })
   const deleteMeeting = useMutation(api.meetings.deleteMeeting)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [search, setSearch] = useState("")
@@ -209,7 +209,7 @@ function CreateMeetingDialog({ semesterId }: { semesterId: Id<"semester"> }) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [selectedStudentId, setSelectedStudentId] = useState<string>("")
-  const students = useQuery(api.students.list)
+  const students = useQuery(api.students.list, { sortBy: 'last-name' })
   const createMeeting = useMutation(api.meetings.createMeeting)
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -363,8 +363,8 @@ function SendEmailButton({
                         <TableCell className="text-xs">{email.subject}</TableCell>
                         <TableCell>
                           <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium capitalize ${isSuccess ? "bg-green-100 text-green-800" :
-                              isError ? "bg-red-100 text-red-800" :
-                                "bg-yellow-100 text-yellow-800"
+                            isError ? "bg-red-100 text-red-800" :
+                              "bg-yellow-100 text-yellow-800"
                             }`}>
                             {displayStatus}
                           </span>

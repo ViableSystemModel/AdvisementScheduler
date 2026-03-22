@@ -2,9 +2,15 @@ import { ConvexError, v } from 'convex/values';
 import { getLoggedInAdvisor } from './auth';
 import { mutation, query } from './_generated/server';
 
+const lastName = (name: string) => name.split(' ').pop() ?? '';
+
 export const list = query({
   args: {
     includeArchived: v.optional(v.boolean()),
+    sortBy: v.optional(v.union(
+      v.literal('first-name'),
+      v.literal('last-name'),
+    )),
   },
   handler: async (ctx, args) => {
     const advisor = await getLoggedInAdvisor(ctx);
@@ -16,9 +22,15 @@ export const list = query({
       .withIndex('by_advisor', q => q.eq('advisorId', advisor._id))
       .collect();
 
-    const filteredStudents = args.includeArchived 
-      ? students 
+    const filteredStudents = args.includeArchived
+      ? students
       : students.filter(s => !s.archived);
+
+    if (args.sortBy === 'first-name') {
+      filteredStudents.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (args.sortBy === 'last-name') {
+      filteredStudents.sort((a, b) => lastName(a.name).localeCompare(lastName(b.name)));
+    }
 
     return await Promise.all(filteredStudents.map(async (student) => {
       const meetings = await ctx.db.query('meeting')
